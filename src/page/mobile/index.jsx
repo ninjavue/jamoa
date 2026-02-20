@@ -165,7 +165,7 @@ const Expertise = () => {
     resPerEmail: "",
     orgType: "",
     ordEndDate: "",
-    system: 2,
+    system: 1,
     initialHashFile: null,
     finalHashFile: null,
     malumot: "",
@@ -650,7 +650,6 @@ const Expertise = () => {
 
         const list = res[1]?.docs;
 
-        console.log(res[1]);
 
         if (!Array.isArray(list)) {
           // console.error("docs kelmadi yoki array emas", res);
@@ -1547,7 +1546,6 @@ Mazkur turdagi zaiflik “MASWE-0058” (inglizcha. Insecure Deep Links – Xavf
       // personUpdate
       // console.log("Payload:", payload);
       const res = await sendRpcRequest(stRef, METHOD.ORDER_UPDATE, payload);
-      console.log(res);
 
       if (res.status === METHOD.OK) {
         const finalResPer = resPerInputsFilled
@@ -3860,25 +3858,34 @@ Mazkur turdagi zaiflik “MASWE-0058” (inglizcha. Insecure Deep Links – Xavf
                 <thead>
                   <tr className="bg-slate-50 text-slate-500 text-[13px] uppercase border-b border-slate-200 dark:bg-transparent">
                     <th className="px-4 py-3 font-medium">N</th>
-                    <th className="px-4 py-3 font-medium">TASHKILOT NOMI</th>
-                    <th className="px-4 py-3 font-medium text-wrap max-w-[250px]">
+                    <th className="px-4 py-3 font-medium text-center">TASHKILOT NOMI</th>
+                    <th className="px-4 py-3 font-medium text-wrap max-w-[250px] text-center">
                       AXBOROT TIZIMINING NOMI
                     </th>
-                    <th className="px-4 py-3 font-medium">SHARTNOMA RAQAMI</th>
-                    <th className="px-4 py-3 font-medium">NAZORATCHI</th>
-                    <th className="px-4 py-3 font-medium">BAJARUVCHI</th>
-                    <th className="px-4 py-3 font-medium text-wrap w-[200px]">
+                    <th className="px-4 py-3 font-medium text-center">SHARTNOMA RAQAMI</th>
+                    <th className="px-4 py-3 font-medium ">NAZORATCHI</th>
+                    <th className="px-4 py-3 font-medium ">BAJARUVCHI</th>
+                    <th className="px-4 py-3 font-medium text-wrap w-[200px] text-center">
                       EKSPERTIZANING BOSHLANISH SANASI
                     </th>
-                    <th className="px-4 py-3 font-medium text-wrap w-[200px]">
+                    <th className="px-4 py-3 font-medium text-wrap w-[200px] text-center">
                       EKSPERTIZANING YAKUNLANISH SANASI
                     </th>
-                    <th className="px-4 py-3 font-medium text-wrap">
-                      HISOB MA'LUMOTI
-                    </th>
-                    <th className="px-4 py-3 font-medium text-wrap">BALL</th>
-                    <th className="px-4 py-3 font-medium">QAYSI BOSQICHDA</th>
-                    <th className="px-4 py-3 font-medium">HOLATLAR</th>
+
+                    {user.role !== 8 && (
+                      <th className="px-4 py-3 font-medium text-wrap">
+                        HISOB MA'LUMOTI
+                      </th>
+                    )}
+                    {user.role !== 8 && (
+                      <th className="px-4 py-3 font-medium text-wrap">BALL</th>
+                    )}
+                    {user.role !== 8 && (
+                      <th className="px-4 py-3 font-medium">QAYSI BOSQICHDA</th>
+                    )}
+                    {user.role !== 8 && (
+                      <th className="px-4 py-3 font-medium">HOLATLAR</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -3919,157 +3926,165 @@ Mazkur turdagi zaiflik “MASWE-0058” (inglizcha. Insecure Deep Links – Xavf
                       <td className="px-4 py-3 align-middle text-[15px] text-slate-600 text-center w-[200px] dark:text-white">
                         {formatDate(r.endDate)}
                       </td>
-                      <td className="px-4 py-3 align-middle text-center">
-                        <span
-                          className={`inline-block px-3 py-1 text-[12px] rounded-full ${
-                            r.hisobot
-                              ? "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-100"
-                              : "bg-red-100 dark:bg-red-500 text-red-600 dark:text-red-50"
-                          }`}
-                        >
-                          {r.hisobot || "Chiqarilmagan"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 align-middle text-[15px] text-center text-slate-600 dark:text-white">
-                        {r.ball || "0/15"}
-                      </td>
-                      <td className="px-4 py-3 align-middle">
-                        <div className="h-full flex relative">
-                          {STATUS_STEPS.map((step, index) => {
-                            const isActive = r.status >= step.id;
-                            const stepBgClass = !isActive
-                              ? "status-step-inactive"
-                              : "status-step-active";
-                            const stepStyle =
-                              step.id > r.status
-                                ? {
-                                    background:
-                                      "linear-gradient(145deg, #9ca3af, #6b7280)",
-                                  }
-                                : r.status === 10 && step.id === 10
+                      {user.role !== 8 && (
+                        <td className="px-4 py-3 align-middle text-center">
+                          <span
+                            className={`inline-block px-3 py-1 text-[12px] rounded-full ${
+                              r.hisobot
+                                ? "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-100"
+                                : "bg-red-100 dark:bg-red-500 text-red-600 dark:text-red-50"
+                            }`}
+                          >
+                            {r.hisobot || "Chiqarilmagan"}
+                          </span>
+                        </td>
+                      )}
+                      {user.role !== 8 && (
+                        <td className="px-4 py-3 align-middle text-[15px] text-center text-slate-600 dark:text-white">
+                          {r.ball || "0/15"}
+                        </td>
+                      )}
+                      {user.role !== 8 && (
+                        <td className="px-4 py-3 align-middle">
+                          <div className="h-full flex relative">
+                            {STATUS_STEPS.map((step, index) => {
+                              const isActive = r.status >= step.id;
+                              const stepBgClass = !isActive
+                                ? "status-step-inactive"
+                                : "status-step-active";
+                              const stepStyle =
+                                step.id > r.status
                                   ? {
                                       background:
-                                        "linear-gradient(145deg, #dc2626, #b91c1c)",
+                                        "linear-gradient(145deg, #9ca3af, #6b7280)",
                                     }
-                                  : r.status === 9 && step.id === 9
+                                  : r.status === 10 && step.id === 10
                                     ? {
                                         background:
-                                          "linear-gradient(145deg, #16a34a, #15803d)",
+                                          "linear-gradient(145deg, #dc2626, #b91c1c)",
                                       }
-                                    : r.status >= step.id &&
-                                        (r.status === 9 || r.status === 10)
+                                    : r.status === 9 && step.id === 9
                                       ? {
                                           background:
-                                            "linear-gradient(145deg, #2563eb, #1d4ed8)",
+                                            "linear-gradient(145deg, #16a34a, #15803d)",
                                         }
-                                      : undefined;
+                                      : r.status >= step.id &&
+                                          (r.status === 9 || r.status === 10)
+                                        ? {
+                                            background:
+                                              "linear-gradient(145deg, #2563eb, #1d4ed8)",
+                                          }
+                                        : undefined;
 
-                            return (
-                              <div
-                                key={step.id}
-                                className="relative group status-step-group"
-                                style={{
-                                  marginLeft: index === 0 ? 0 : 1,
-                                  zIndex: index,
-                                }}
-                              >
-                                <span
-                                  className={`status-step w-7 h-7 cursor-pointer rounded-full border border-white dark:border-[#2b2c40] ${stepBgClass} flex items-center justify-center`}
-                                  style={stepStyle}
+                              return (
+                                <div
+                                  key={step.id}
+                                  className="relative group status-step-group"
+                                  style={{
+                                    marginLeft: index === 0 ? 0 : 1,
+                                    zIndex: index,
+                                  }}
                                 >
-                                  <span className="text-[10px] text-white font-bold">
-                                    {step.id}
+                                  <span
+                                    className={`status-step w-7 h-7 cursor-pointer rounded-full border border-white dark:border-[#2b2c40] ${stepBgClass} flex items-center justify-center`}
+                                    style={stepStyle}
+                                  >
+                                    <span className="text-[10px] text-white font-bold">
+                                      {step.id}
+                                    </span>
                                   </span>
-                                </span>
 
-                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1 text-sm text-white bg-black rounded opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-none z-[100]">
-                                  {step.label}
-                                  <div className="absolute left-1/2 -bottom-1 w-2 h-2 bg-black rotate-45 -translate-x-1/2"></div>
+                                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1 text-sm text-white bg-black rounded opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-none z-[100]">
+                                    {step.label}
+                                    <div className="absolute left-1/2 -bottom-1 w-2 h-2 bg-black rotate-45 -translate-x-1/2"></div>
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 align-middle">
-                        <div className="flex items-center gap-2">
-                          {user.role === 1 || user.role === 3 ? (
-                            <button
-                              className="p-2 rounded-md hover:bg-blue-500 hover:text-white bg-blue-400 text-white"
-                              onClick={() => handleEdit(r)}
-                            >
-                              <iconify-icon
-                                icon="tabler:edit"
-                                width="20"
-                                height="20"
-                              ></iconify-icon>
-                            </button>
-                          ) : (
-                            <button
-                              className="p-2 rounded-md hover:bg-blue-500 hover:text-white bg-blue-400 text-white"
-                              onClick={() => handleNextStep(r)}
-                            >
-                              <iconify-icon
-                                icon="tabler:edit"
-                                width="20"
-                                height="20"
-                              ></iconify-icon>
-                            </button>
-                          )}
-
-                          <button
-                            className="p-2 rounded-md bg-slate-200 text-slate-500 hover:bg-slate-400 hover:text-white"
-                            onClick={() => handleModal(r.id)}
-                          >
-                            <iconify-icon
-                              icon="mdi:dots-vertical"
-                              width="20"
-                              height="20"
-                            ></iconify-icon>
-                          </button>
-                          {r.status === 5 &&
-                            (r.workers || []).some(
-                              (w) => String(w.a1) === String(user?.id),
-                            ) &&
-                            (r.sU === 2 ? (
-                              <span className="ml-2 px-4 py-2 rounded-full border-2 border-slate-300 bg-slate-100 text-slate-500 text-sm font-medium dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-400">
-                                Tekshirilmoqda
-                              </span>
+                              );
+                            })}
+                          </div>
+                        </td>
+                      )}
+                      {user.role !== 8 && (
+                        <td className="px-4 py-3 align-middle">
+                          <div className="flex items-center gap-2">
+                            {user.role === 1 || user.role === 3 ? (
+                              <button
+                                className="p-2 rounded-md hover:bg-blue-500 hover:text-white bg-blue-400 text-white"
+                                onClick={() => handleEdit(r)}
+                              >
+                                <iconify-icon
+                                  icon="tabler:edit"
+                                  width="20"
+                                  height="20"
+                                ></iconify-icon>
+                              </button>
                             ) : (
                               <button
-                                type="button"
-                                className="ml-2 px-4 py-2 rounded-full border-2 border-cyan-500 bg-white text-cyan-500 text-sm font-medium hover:bg-cyan-50 transition-colors dark:bg-transparent dark:text-cyan-400 dark:border-cyan-400 dark:hover:bg-cyan-500/10"
-                                onClick={() => handleTekshirtirish(r.id)}
+                                className="p-2 rounded-md hover:bg-blue-500 hover:text-white bg-blue-400 text-white"
+                                onClick={() => handleNextStep(r)}
                               >
-                                Tekshirtirish
+                                <iconify-icon
+                                  icon="tabler:edit"
+                                  width="20"
+                                  height="20"
+                                ></iconify-icon>
                               </button>
-                            ))}
-                          {r.status === 5 &&
-                            (r.controllers || []).some(
-                              (c) => String(c.a1) === String(user?.id),
-                            ) &&
-                            (r.sU === 2 ? (
-                              <div className="flex justify-center gap-3">
+                            )}
+
+                            <button
+                              className="p-2 rounded-md bg-slate-200 text-slate-500 hover:bg-slate-400 hover:text-white"
+                              onClick={() => handleModal(r.id)}
+                            >
+                              <iconify-icon
+                                icon="mdi:dots-vertical"
+                                width="20"
+                                height="20"
+                              ></iconify-icon>
+                            </button>
+                            {r.status === 5 &&
+                              (r.workers || []).some(
+                                (w) => String(w.a1) === String(user?.id),
+                              ) &&
+                              (r.sU === 2 ? (
+                                <span className="ml-2 px-4 py-2 rounded-full border-2 border-slate-300 bg-slate-100 text-slate-500 text-sm font-medium dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-400">
+                                  Tekshirilmoqda
+                                </span>
+                              ) : (
                                 <button
-                                  className="ml-2 px-4 py-2 rounded-full border-2 border-red-500 bg-white text-red-500 text-sm font-medium hover:bg-red-50 transition-colors dark:bg-transparent dark:text-red-400 dark:border-red-400 dark:hover:bg-cyan-500/10"
-                                  onClick={() => handleBackExp(r.id)}
                                   type="button"
-                                >
-                                  Qaytarish
-                                </button>
-                                <button
                                   className="ml-2 px-4 py-2 rounded-full border-2 border-cyan-500 bg-white text-cyan-500 text-sm font-medium hover:bg-cyan-50 transition-colors dark:bg-transparent dark:text-cyan-400 dark:border-cyan-400 dark:hover:bg-cyan-500/10"
-                                  onClick={() => handleNextExp(r.id)}
-                                  type="button"
+                                  onClick={() => handleTekshirtirish(r.id)}
                                 >
-                                  Tasdiqlash
+                                  Tekshirtirish
                                 </button>
-                              </div>
-                            ) : (
-                              <></>
-                            ))}
-                        </div>
-                      </td>
+                              ))}
+                            {r.status === 5 &&
+                              (r.controllers || []).some(
+                                (c) => String(c.a1) === String(user?.id),
+                              ) &&
+                              (r.sU === 2 ? (
+                                <div className="flex justify-center gap-3">
+                                  <button
+                                    className="ml-2 px-4 py-2 rounded-full border-2 border-red-500 bg-white text-red-500 text-sm font-medium hover:bg-red-50 transition-colors dark:bg-transparent dark:text-red-400 dark:border-red-400 dark:hover:bg-cyan-500/10"
+                                    onClick={() => handleBackExp(r.id)}
+                                    type="button"
+                                  >
+                                    Qaytarish
+                                  </button>
+                                  <button
+                                    className="ml-2 px-4 py-2 rounded-full border-2 border-cyan-500 bg-white text-cyan-500 text-sm font-medium hover:bg-cyan-50 transition-colors dark:bg-transparent dark:text-cyan-400 dark:border-cyan-400 dark:hover:bg-cyan-500/10"
+                                    onClick={() => handleNextExp(r.id)}
+                                    type="button"
+                                  >
+                                    Tasdiqlash
+                                  </button>
+                                </div>
+                              ) : (
+                                <></>
+                              ))}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

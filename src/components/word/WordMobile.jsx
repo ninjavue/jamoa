@@ -110,10 +110,12 @@ const WordMobile = ({ data }) => {
           fullName: [surname, name, patronymic].filter(Boolean).join(" "),
           shortName:
             name && surname
-              ? ((name.length >= 2 && (name.slice(0, 2) === "Sh" || name.slice(0, 2) === "Ch"))
+              ? (name.length >= 2 &&
+                (name.slice(0, 2) === "Sh" || name.slice(0, 2) === "Ch")
                   ? name.slice(0, 2) + "." + surname
-                  : name.slice(0, 1) + "." + surname).trim()
-              : (surname || name || ""),
+                  : name.slice(0, 1) + "." + surname
+                ).trim()
+              : surname || name || "",
         };
         setUser(newUser);
       }
@@ -140,6 +142,23 @@ const WordMobile = ({ data }) => {
   };
   const date = new Date();
   const mon = date.getMonth() + 1;
+
+  const formatDate = () => {
+    const now = new Date();
+    const formattedDate =
+      now.getFullYear() +
+      "-" +
+      String(now.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(now.getDate()).padStart(2, "0") +
+      "_" +
+      String(now.getHours()).padStart(2, "0") +
+      "-" +
+      String(now.getMinutes()).padStart(2, "0") +
+      "-" +
+      String(now.getSeconds()).padStart(2, "0");
+    return formattedDate;
+  };
   const docxConvert = async () => {
     const doc = new Document({
       styles: {
@@ -1416,7 +1435,7 @@ const WordMobile = ({ data }) => {
 
     // Hujjatni .docx formatida saqlash va foydalanuvchiga yuklab berish
     Packer.toBlob(doc).then((blob) => {
-      saveAs(blob, "CustomMarginsDocument.docx");
+      saveAs(blob, `${data.ordName}_${formatDate()}.docx`);
     });
   };
 

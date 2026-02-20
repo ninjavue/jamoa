@@ -52,6 +52,23 @@ const WordQaytaKam = ({ data }) => {
     });
   };
 
+   const formatDate = () => {
+    const now = new Date();
+    const formattedDate =
+      now.getFullYear() +
+      "-" +
+      String(now.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(now.getDate()).padStart(2, "0") +
+      "_" +
+      String(now.getHours()).padStart(2, "0") +
+      "-" +
+      String(now.getMinutes()).padStart(2, "0") +
+      "-" +
+      String(now.getSeconds()).padStart(2, "0");
+    return formattedDate;
+  };
+
   const getUser = async () => {
     try {
       const res = await sendRpcRequest(stRef, METHOD.USER_GET, {});
@@ -342,7 +359,7 @@ const WordQaytaKam = ({ data }) => {
 
     // Hujjatni .docx formatida saqlash va foydalanuvchiga yuklab berish
     Packer.toBlob(doc).then((blob) => {
-      saveAs(blob, "CustomMarginsDocument.docx");
+      saveAs(blob, `${data.ordName}_${formatDate()}.docx`);
     });
   };
 
