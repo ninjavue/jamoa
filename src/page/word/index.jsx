@@ -245,6 +245,22 @@ const Word = () => {
   const pages2Ref = useRef([]);
   const pages3Ref = useRef([]);
   const { id } = useParams();
+  const formatDateNoew = () => {
+    const now = new Date();
+    const formattedDate =
+      now.getFullYear() +
+      "-" +
+      String(now.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(now.getDate()).padStart(2, "0") +
+      "_" +
+      String(now.getHours()).padStart(2, "0") +
+      "-" +
+      String(now.getMinutes()).padStart(2, "0") +
+      "-" +
+      String(now.getSeconds()).padStart(2, "0");
+    return formattedDate;
+  };
 
   useEffect(() => {
     pages1Ref.current = pages1;
@@ -261,7 +277,7 @@ const Word = () => {
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: "abm-mobil",
+    documentTitle: `${appName}_${formatDateNoew()}`,
   });
 
   const startIndex = htmlContent.findIndex((p) =>
@@ -3034,12 +3050,12 @@ const Word = () => {
                 </tr>
                 <tr>
                   <td>11.</td>
-                  <td>-</td>
+                  <td>Play Market havolasi</td>
                   <td>-</td>
                 </tr>
                 <tr>
                   <td>12.</td>
-                  <td>-</td>
+                  <td>Play Market reytingi</td>
                   <td>-</td>
                 </tr>
                 <tr>
@@ -3163,12 +3179,12 @@ const Word = () => {
                 </tr>
                 <tr>
                   <td>11.</td>
-                  <td>Play Market havolasi</td>
+                  <td>“App store” havolasi</td>
                   <td>-</td>
                 </tr>
                 <tr>
                   <td>12.</td>
-                  <td>Play Market reytingi</td>
+                  <td>“App store” reytingi</td>
                   <td>-</td>
                 </tr>
                 <tr>
@@ -3465,7 +3481,7 @@ const Word = () => {
               Axborot xavfsizligi zaifliklari xavflilik darjasidan kelib chiqqan
               holda mobil ilovaga quyidagi risklar xavf soladi.
             </div>
-            <div className="bg-[#699fdd]">
+            <div className="bg-gray-300">
               <div className="text">
                 <b>Yuqori</b> - ushbu turdagi axborot xavfsizligi zaifliklari
                 ilovaga eng yuqori xavf ko‘rsatadi. Ulardan foydalanish ilovaga
@@ -3979,9 +3995,7 @@ const Word = () => {
                 </p>
                 <p className="system-paragraph">Tel.: (71) 203-00-24</p>
                 <p className="system-paragraph">
-                  {new Date().getFullYear()}-yil "_____
-                  "-
-                  ______________
+                  {new Date().getFullYear()}-yil "_____ "- ______________
                 </p>
               </div>
             </div>
