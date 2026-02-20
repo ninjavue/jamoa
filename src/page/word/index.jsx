@@ -293,21 +293,18 @@ const Word = () => {
     return container?.closest?.(".page-content.new-content") != null;
   }, []);
 
-  const getPlatformFromBlocks = useCallback(
-    (blocks) => {
-      for (const b of blocks || []) {
-        if (b && typeof b === "string" && b.includes('class="title"')) {
-          const t = stripHtml(b).toLowerCase();
-          if (t.includes("android")) return "android";
-          if (t.includes("ios")) return "ios";
-          if (t.includes("mobil ilova va server") || t.includes("umumiy"))
-            return "umumiy";
-        }
+  const getPlatformFromBlocks = useCallback((blocks) => {
+    for (const b of blocks || []) {
+      if (b && typeof b === "string" && b.includes('class="title"')) {
+        const t = stripHtml(b).toLowerCase();
+        if (t.includes("android")) return "android";
+        if (t.includes("ios")) return "ios";
+        if (t.includes("mobil ilova va server") || t.includes("umumiy"))
+          return "umumiy";
       }
-      return null;
-    },
-    [],
-  );
+    }
+    return null;
+  }, []);
 
   const syncNewContentFromDOM = useCallback((len1, len2, len3) => {
     const container = document.querySelector(".word-container");
@@ -321,7 +318,11 @@ const Word = () => {
           .filter((el) => el.tagName === "DIV")
           .map((div) => {
             const hasNested =
-              div.querySelector("div") && !div.classList.contains("text") && !div.classList.contains("exp-title") && !div.classList.contains("exp-d") && !div.classList.contains("title");
+              div.querySelector("div") &&
+              !div.classList.contains("text") &&
+              !div.classList.contains("exp-title") &&
+              !div.classList.contains("exp-d") &&
+              !div.classList.contains("title");
             return hasNested ? div.innerHTML : div.outerHTML;
           });
         newContentPages.push(blocks);
@@ -363,7 +364,10 @@ const Word = () => {
         });
       const hasContent = blocks.some((b) => {
         if (!b || typeof b !== "string") return false;
-        const t = b.replace(/<[^>]*>/g, "").replace(/\s/g, "").replace(/\u00a0/g, "");
+        const t = b
+          .replace(/<[^>]*>/g, "")
+          .replace(/\s/g, "")
+          .replace(/\u00a0/g, "");
         return t.length > 0 || /<img[\s\S]*?>/i.test(b);
       });
       if (hasContent) pagesWithContent.push(blocks);
@@ -988,7 +992,11 @@ const Word = () => {
         const clipboardData = e.clipboardData || e.originalEvent?.clipboardData;
         if (!clipboardData) return;
 
-        const pasteContent = (clipboardData.getData("text/html") || clipboardData.getData("text/plain") || "").trim();
+        const pasteContent = (
+          clipboardData.getData("text/html") ||
+          clipboardData.getData("text/plain") ||
+          ""
+        ).trim();
 
         // Bir marta qayta ishlash — boshqa .editable listenerlari ishlamasin (3 marta takrorlanish oldini)
         e.stopPropagation();
@@ -997,9 +1005,14 @@ const Word = () => {
         if (!selection || selection.rangeCount === 0) return;
         const range = selection.getRangeAt(0);
 
-        const pageContent = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
-          ? range.commonAncestorContainer.parentElement?.closest(".page-content.new-content")
-          : range.commonAncestorContainer.closest(".page-content.new-content");
+        const pageContent =
+          range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+            ? range.commonAncestorContainer.parentElement?.closest(
+                ".page-content.new-content",
+              )
+            : range.commonAncestorContainer.closest(
+                ".page-content.new-content",
+              );
 
         if (pageContent) {
           e.preventDefault();
@@ -1014,14 +1027,20 @@ const Word = () => {
             try {
               document.execCommand("insertHTML", false, pasteContent);
             } catch (_) {}
-            setTimeout(() => { syncFromDOMAndFilterEmpty?.(); handlePageOverflow(); }, 100);
+            setTimeout(() => {
+              syncFromDOMAndFilterEmpty?.();
+              handlePageOverflow();
+            }, 100);
             return;
           }
 
-          const allNewContents = document.querySelectorAll(".page-content.new-content");
-          const pageIndexGlobal = Array.from(allNewContents).indexOf(pageContent);
+          const allNewContents = document.querySelectorAll(
+            ".page-content.new-content",
+          );
+          const pageIndexGlobal =
+            Array.from(allNewContents).indexOf(pageContent);
           const elementChildren = Array.from(pageContent.children).filter(
-            (el) => el.nodeType === Node.ELEMENT_NODE
+            (el) => el.nodeType === Node.ELEMENT_NODE,
           );
           const blockIndex = elementChildren.indexOf(currentBlock);
           if (pageIndexGlobal < 0 || blockIndex < 0) return;
@@ -1045,7 +1064,9 @@ const Word = () => {
           let currentPlat = "android";
           const platformPerPage = [];
           for (let i = 0; i < allNewContents.length; i++) {
-            currentPlat = getPlatformFromBlocks(getBlocksFromPage(allNewContents[i])) || currentPlat;
+            currentPlat =
+              getPlatformFromBlocks(getBlocksFromPage(allNewContents[i])) ||
+              currentPlat;
             platformPerPage.push(currentPlat);
           }
           const platform = platformPerPage[pageIndexGlobal];
@@ -1060,7 +1081,11 @@ const Word = () => {
             setPages1((prev) => {
               if (localPageIndex >= prev.length) return prev;
               const pageBlocks = prev[localPageIndex] || [];
-              const next = [...pageBlocks.slice(0, blockIndex + 1), newBlockHtml, ...pageBlocks.slice(blockIndex + 1)];
+              const next = [
+                ...pageBlocks.slice(0, blockIndex + 1),
+                newBlockHtml,
+                ...pageBlocks.slice(blockIndex + 1),
+              ];
               const out = [...prev];
               out[localPageIndex] = next;
               return out;
@@ -1069,7 +1094,11 @@ const Word = () => {
             setPages2((prev) => {
               if (localPageIndex >= prev.length) return prev;
               const pageBlocks = prev[localPageIndex] || [];
-              const next = [...pageBlocks.slice(0, blockIndex + 1), newBlockHtml, ...pageBlocks.slice(blockIndex + 1)];
+              const next = [
+                ...pageBlocks.slice(0, blockIndex + 1),
+                newBlockHtml,
+                ...pageBlocks.slice(blockIndex + 1),
+              ];
               const out = [...prev];
               out[localPageIndex] = next;
               return out;
@@ -1078,7 +1107,11 @@ const Word = () => {
             setPages3((prev) => {
               if (localPageIndex >= prev.length) return prev;
               const pageBlocks = prev[localPageIndex] || [];
-              const next = [...pageBlocks.slice(0, blockIndex + 1), newBlockHtml, ...pageBlocks.slice(blockIndex + 1)];
+              const next = [
+                ...pageBlocks.slice(0, blockIndex + 1),
+                newBlockHtml,
+                ...pageBlocks.slice(blockIndex + 1),
+              ];
               const out = [...prev];
               out[localPageIndex] = next;
               return out;
@@ -1320,9 +1353,8 @@ const Word = () => {
         const allNewContents = document.querySelectorAll(
           ".page-content.new-content",
         );
-        const newContentIndex = Array.from(allNewContents).indexOf(
-          currentPageContent,
-        );
+        const newContentIndex =
+          Array.from(allNewContents).indexOf(currentPageContent);
         if (newContentIndex <= 0) return;
 
         const prevPageContent = allNewContents[newContentIndex - 1];
@@ -1372,9 +1404,8 @@ const Word = () => {
           Array.isArray(page) ? [...page] : [],
         );
         const blockToMove = newCurrentPages[newContentIndex][0];
-        newCurrentPages[newContentIndex] = newCurrentPages[
-          newContentIndex
-        ].slice(1);
+        newCurrentPages[newContentIndex] =
+          newCurrentPages[newContentIndex].slice(1);
         newCurrentPages[newContentIndex - 1] = [
           ...newCurrentPages[newContentIndex - 1],
           blockToMove,
@@ -1569,7 +1600,10 @@ const Word = () => {
 
         const blockHasRealContent = (b) => {
           if (!b || typeof b !== "string") return false;
-          const t = b.replace(/<[^>]*>/g, "").replace(/\s/g, "").replace(/\u00a0/g, "");
+          const t = b
+            .replace(/<[^>]*>/g, "")
+            .replace(/\s/g, "")
+            .replace(/\u00a0/g, "");
           return t.length > 0 || /<img[\s\S]*?>/i.test(b);
         };
 
@@ -3431,27 +3465,29 @@ const Word = () => {
               Axborot xavfsizligi zaifliklari xavflilik darjasidan kelib chiqqan
               holda mobil ilovaga quyidagi risklar xavf soladi.
             </div>
-            <div className="text">
-              <b>Yuqori</b> - ushbu turdagi axborot xavfsizligi zaifliklari
-              ilovaga eng yuqori xavf ko‘rsatadi. Ulardan foydalanish ilovaga
-              ruxsatsiz kirish, uning ma’lumotlaridan foydalanish bilan bir
-              qatorda muhim, konfidensial ma’lumotlarni sizib chiqish
-              holatlarini yuzaga kelishiga sabab bo‘lishi mumkin.
-            </div>
-            <div className="text">
-              <b>O‘rta</b> - ushbu turdagi axborot xavfsizligi zaifliklari ko‘p
-              holatlarda boshqa turdagi xavflilik darajasi yuqori bo‘lgan
-              harakatlarni amalga oshirishga, ilova bilan bog‘liq ma’lumotlarni
-              to‘plashga xizmat qiladi.
-            </div>
-            <div className="text">
-              <b>Past</b> - ushbu turdagi axborot xavfsizligi zaifliklari
-              ilovada umumiy ma’lumotlarga ega bo‘lish imkoniyatini taqdim
-              etadi.
-            </div>
-            <div className="text">
-              <b>Ma’lumot uchun </b> – ilovaga xavf solmaydigan, ekspertiza
-              davrida aniqlangan axborot xavfsizligiga zid holatlar.
+            <div className="bg-[#699fdd]">
+              <div className="text">
+                <b>Yuqori</b> - ushbu turdagi axborot xavfsizligi zaifliklari
+                ilovaga eng yuqori xavf ko‘rsatadi. Ulardan foydalanish ilovaga
+                ruxsatsiz kirish, uning ma’lumotlaridan foydalanish bilan bir
+                qatorda muhim, konfidensial ma’lumotlarni sizib chiqish
+                holatlarini yuzaga kelishiga sabab bo‘lishi mumkin.
+              </div>
+              <div className="text">
+                <b>O‘rta</b> - ushbu turdagi axborot xavfsizligi zaifliklari
+                ko‘p holatlarda boshqa turdagi xavflilik darajasi yuqori bo‘lgan
+                harakatlarni amalga oshirishga, ilova bilan bog‘liq
+                ma’lumotlarni to‘plashga xizmat qiladi.
+              </div>
+              <div className="text">
+                <b>Past</b> - ushbu turdagi axborot xavfsizligi zaifliklari
+                ilovada umumiy ma’lumotlarga ega bo‘lish imkoniyatini taqdim
+                etadi.
+              </div>
+              <div className="text">
+                <b>Ma’lumot uchun </b> – ilovaga xavf solmaydigan, ekspertiza
+                davrida aniqlangan axborot xavfsizligiga zid holatlar.
+              </div>
             </div>
           </div>
           <div className="page-number flex justify-center mt-auto">
@@ -3728,7 +3764,10 @@ const Word = () => {
                 <div>mobil ilovasi</div>
               </div>
 
-              <div className="page-content editable new-content" style={{paddingTop: '10px'}}>
+              <div
+                className="page-content editable new-content"
+                style={{ paddingTop: "10px" }}
+              >
                 {pageItems.map((item, i) => (
                   <div key={i} dangerouslySetInnerHTML={{ __html: item }} />
                 ))}
@@ -3761,10 +3800,10 @@ const Word = () => {
             </div>
             <div className="depart-subtitle">UMUMIY XULOSA</div>
             <div className="text">
-              “{appName}” 
-              mobil ilovasini kiberxavfsizlik talablariga muvofiqligi yuzasidan
-              o‘tkazilgan ekspertiza natijasida kiberxavfsizlikning yuqori va
-              o‘rta darajadagi zaifliklari aniqlandi.
+              “{appName}” mobil ilovasini kiberxavfsizlik talablariga
+              muvofiqligi yuzasidan o‘tkazilgan ekspertiza natijasida
+              kiberxavfsizlikning yuqori va o‘rta darajadagi zaifliklari
+              aniqlandi.
             </div>
             <div className="text">
               Ekspertiza davrida aniqlangan zaifliklar mobil ilova va u bilan
@@ -3823,7 +3862,7 @@ const Word = () => {
             <div>mobil ilovasi</div>
           </div>
           <div className="page-content editable">
-            <div className="text">
+            <div className="text mt-5">
               - qurilmani virtual muhitlarda o‘rnatilishi va “root” huquqlarini
               cheklash;
             </div>
@@ -3865,6 +3904,90 @@ const Word = () => {
           </div>
           <div className="page-number flex justify-center mt-auto exp-page-num">
             <span>{currentPages?.length + 18}</span>
+          </div>
+        </div>
+
+        <div
+          className="a4"
+          style={{
+            backgroundImage:
+              6 % 2 === 0
+                ? `url("/assets/word/2.png")`
+                : `url("/assets/word/3.png")`,
+          }}
+        >
+          <div
+            className="page-title mt-5"
+            style={{
+              width: "85%",
+              textAlign: 12 % 2 === 0 ? "end" : "start",
+              marginRight: 12 % 2 === 0 ? "50px" : "0px",
+              fontSize: appName.length > 20 ? "14px" : "",
+              marginTop: appName.length > 20 ? "-26px" : "",
+            }}
+          >
+            <div className="max-w-[200px] ml-auto">“{appName}”</div>
+            <div>mobil ilovasi</div>
+          </div>
+          <div className="page-content editable">
+            <div className="text mt-6">
+              <b>“Kiberxavfsizlik markazi” DUK mutaxassislari:</b>
+            </div>
+            <table
+              style={{ border: "none", marginLeft: "40px", marginTop: "30px" }}
+            >
+              <tbody>
+                <tr className="h-[50px]">
+                  <td className="table-text">Jamoldinov X.</td>
+                  <td className="table-text min-w-[160px]">
+                    <div className="w-[95%] min-w-[95%] border-b h-[20px] border-gray-700"></div>
+                  </td>
+                  <td className="table-text">Yetakchi mutaxassis</td>
+                </tr>
+                <tr className="pt-5 h-[100px]">
+                  <td className="table-text min-w-[180px]">Aliyev A.</td>
+                  <td className="table-text min-w-[160px]">
+                    <div className="w-[95%] min-w-[95%] border-b h-[20px] border-gray-700"></div>
+                  </td>
+                  <td className="table-text">1-toifali mutaxassis</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className="absolute bottom-6 left-12">
+              <div className="system-col">
+                <p className="system-paragraph">
+                  Ro'yhat tartib raqami{" "}
+                  <span className="w-10 border-b border-black"></span>
+                  _______-XDFU-son
+                </p>
+                <p className="system-paragraph">
+                  Kompyuterda ikki nusxada chop etildi.
+                </p>
+                <p className="system-paragraph">
+                  Fayl saqlanmadi. Xomaki matnsiz.
+                </p>
+                <p className="system-paragraph">
+                  1-nusxa - "TAYANCH MIKROMOLIYA BANKI" {orgTypeName} ga
+                </p>
+                <p className="system-paragraph">
+                  2-nusxa - Nazorat va hujjatlar
+                </p>
+                <p className="system-paragraph">aylanishi bo'limi jildiga</p>
+                <p className="system-paragraph">
+                  Bajardi va chop etdi I. Odinayev
+                </p>
+                <p className="system-paragraph">Tel.: (71) 203-00-24</p>
+                <p className="system-paragraph">
+                  {new Date().getFullYear()}-yil "_____
+                  "-
+                  ______________
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="page-number flex justify-center mt-auto exp-page-num">
+            <span>{currentPages?.length + 19}</span>
           </div>
         </div>
         <div className="a4 last-a4">

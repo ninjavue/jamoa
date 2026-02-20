@@ -598,6 +598,19 @@ table.depart-table {
 	text-indent: 40px;
 	text-wrap: auto;
 	font-family: 'CenturyGothic';
+	background-color: transparent !important;
+}
+
+.table-text{
+	font-size: 18px;
+	/* line-height: 1.6; */
+	/* margin-bottom: 8px; */
+	text-align: justify;
+	/* text-indent: 40px; */
+	text-wrap: auto;
+	font-family: 'CenturyGothic';
+	background-color: transparent !important;
+	border: none !important;
 }
 
 .text .text-b {
