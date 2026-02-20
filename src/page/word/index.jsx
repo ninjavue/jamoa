@@ -241,7 +241,16 @@ const Word = () => {
   const printRef = useRef(null);
   const resolvedBlobUrlsRef = useRef(new Set());
   const isLoadingFromServerRef = useRef(false);
+  const pages1Ref = useRef([]);
+  const pages2Ref = useRef([]);
+  const pages3Ref = useRef([]);
   const { id } = useParams();
+
+  useEffect(() => {
+    pages1Ref.current = pages1;
+    pages2Ref.current = pages2;
+    pages3Ref.current = pages3;
+  }, [pages1, pages2, pages3]);
 
   const androidVulns = useMemo(
     () => parseVulnByLevel(vulnAndroid),
@@ -872,6 +881,7 @@ const Word = () => {
           hasImage = true;
           // Prevent default paste behavior only for images to insert custom HTML
           e.preventDefault();
+          e.stopPropagation();
 
           const blob = item.getAsFile();
           const safeType = blob?.type || "image/png";
@@ -978,6 +988,11 @@ const Word = () => {
         const clipboardData = e.clipboardData || e.originalEvent?.clipboardData;
         if (!clipboardData) return;
 
+        const pasteContent = (clipboardData.getData("text/html") || clipboardData.getData("text/plain") || "").trim();
+
+        // Bir marta qayta ishlash — boshqa .editable listenerlari ishlamasin (3 marta takrorlanish oldini)
+        e.stopPropagation();
+
         const selection = window.getSelection();
         if (!selection || selection.rangeCount === 0) return;
         const range = selection.getRangeAt(0);
@@ -1070,10 +1085,12 @@ const Word = () => {
             });
           }
 
-          setTimeout(() => handlePageOverflow(), 50);
+          // Faqat sahifa oqimini qayta hisobla; state ni DOM dan qayta yozmaslik (takrorlanish oldini)
+          setTimeout(() => handlePageOverflow(), 100);
         } else {
-          // .new-content da emas — kursor joyida insert qilamiz (default o‘chirilgani uchun)
-          if (pasteContent.trim()) {
+          // .new-content da emas — kursor joyida insert qilamiz, default paste ni o'chirib bitta marta qo'shamiz
+          e.preventDefault();
+          if (pasteContent) {
             try {
               document.execCommand("insertHTML", false, pasteContent);
             } catch (_) {}
@@ -1280,45 +1297,100 @@ const Word = () => {
         }
       }
 
-      // Handle Shift+Backspace key - move content back to previous page
+      // Handle Shift+Backspace key - move first block to previous page (faqat state, DOM ga tegmaslik — takrorlanish oldini)
       if (e.shiftKey && e.key === "Backspace") {
         e.preventDefault();
 
         const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          const currentPageContent =
-            range.commonAncestorContainer.nodeType === Node.TEXT_NODE
-              ? range.commonAncestorContainer.parentElement.closest(
-                  ".page-content",
-                )
-              : range.commonAncestorContainer.closest(".page-content");
+        if (selection.rangeCount === 0) return;
+        const range = selection.getRangeAt(0);
+        const currentPageContent =
+          range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+            ? range.commonAncestorContainer.parentElement?.closest(
+                ".page-content",
+              )
+            : range.commonAncestorContainer?.closest(".page-content");
 
-          if (currentPageContent) {
-            // Find current and previous page
-            const currentPage = currentPageContent.closest(".a4");
-            const allPages = Array.from(document.querySelectorAll(".a4"));
-            const currentPageIndex = allPages.indexOf(currentPage);
+        if (
+          !currentPageContent?.classList?.contains("new-content") ||
+          currentPageContent.children.length === 0
+        )
+          return;
 
-            if (currentPageIndex > 0) {
-              const prevPage = allPages[currentPageIndex - 1];
-              const prevPageContent = prevPage.querySelector(".page-content");
+        const allNewContents = document.querySelectorAll(
+          ".page-content.new-content",
+        );
+        const newContentIndex = Array.from(allNewContents).indexOf(
+          currentPageContent,
+        );
+        if (newContentIndex <= 0) return;
 
-              if (prevPageContent && currentPageContent.children.length > 0) {
-                // Get first child from current page
-                const firstChild = currentPageContent.firstChild;
-                if (firstChild) {
-                  // Move it to previous page's end
-                  const clonedChild = firstChild.cloneNode(true);
-                  prevPageContent.appendChild(clonedChild);
+        const prevPageContent = allNewContents[newContentIndex - 1];
+        if (!prevPageContent?.classList?.contains("new-content")) return;
 
-                  // Remove from current page
-                  firstChild.remove();
-                }
-              }
-            }
+        const firstChild = currentPageContent.children[0];
+        if (!firstChild || firstChild.nodeType !== Node.ELEMENT_NODE) return;
+
+        const getBlockHtml = (el) => {
+          if (el.tagName === "DIV") {
+            const hasNested =
+              el.querySelector("div") &&
+              !el.classList.contains("text") &&
+              !el.classList.contains("exp-title") &&
+              !el.classList.contains("exp-d") &&
+              !el.classList.contains("title");
+            return hasNested ? el.innerHTML : el.outerHTML;
           }
-        }
+          return el.outerHTML;
+        };
+        const blockHtml = getBlockHtml(firstChild);
+
+        const p1 = pages1Ref.current || [];
+        const p2 = pages2Ref.current || [];
+        const p3 = pages3Ref.current || [];
+        const isPageEmptyFn = (pageBlocks) => {
+          if (!pageBlocks?.length) return true;
+          return !pageBlocks.some((b) => {
+            if (!b || typeof b !== "string") return false;
+            const t = b
+              .replace(/<[^>]*>/g, "")
+              .replace(/\s/g, "")
+              .replace(/\u00a0/g, "");
+            return t.length > 0 || /<img[\s\S]*?>/i.test(b);
+          });
+        };
+        const currentPages = [...p1, ...p2, ...p3].filter(
+          (page) => !isPageEmptyFn(page),
+        );
+        if (
+          newContentIndex >= currentPages.length ||
+          currentPages[newContentIndex].length === 0
+        )
+          return;
+
+        const newCurrentPages = currentPages.map((page, i) =>
+          Array.isArray(page) ? [...page] : [],
+        );
+        const blockToMove = newCurrentPages[newContentIndex][0];
+        newCurrentPages[newContentIndex] = newCurrentPages[
+          newContentIndex
+        ].slice(1);
+        newCurrentPages[newContentIndex - 1] = [
+          ...newCurrentPages[newContentIndex - 1],
+          blockToMove,
+        ];
+
+        const byPlatform = { android: [], ios: [], umumiy: [] };
+        let curPlat = "android";
+        newCurrentPages.forEach((blocks) => {
+          const plat = getPlatformFromBlocks(blocks) || curPlat;
+          curPlat = plat;
+          byPlatform[plat].push(blocks);
+        });
+
+        setPages1(byPlatform.android);
+        setPages2(byPlatform.ios);
+        setPages3(byPlatform.umumiy);
       }
 
       // Handle Enter key for page overflow
@@ -1359,7 +1431,7 @@ const Word = () => {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [editing]);
+  }, [editing, syncFromDOMAndFilterEmpty]);
 
   const paginateHtml = (html) => {
     const measure = document.createElement("div");
@@ -2303,6 +2375,11 @@ const Word = () => {
     });
 
     if (res.status === METHOD.OK) {
+      // Scroll joyini saqlab qolamiz — saqlashdan keyin shu joyda qolish uchun
+      const scrollY = window.scrollY;
+      const wordContainer = document.querySelector(".word-container");
+      const containerScrollTop = wordContainer ? wordContainer.scrollTop : 0;
+
       // paged — har bir indeksda shu sahifa kontenti; state uchun platforma bo'yicha qayta ajratamiz
       const byPlatform = { android: [], ios: [], umumiy: [] };
       let currentPlatform = "android";
@@ -2316,6 +2393,12 @@ const Word = () => {
       setPages3(byPlatform.umumiy);
       setTableData(tables);
       setEditing(false); // edit rejimi
+
+      // Re-render dan keyin scroll joyini qaytaramiz (React state async yangilanishi uchun qisqa kutamiz)
+      setTimeout(() => {
+        window.scrollTo(0, scrollY);
+        if (wordContainer) wordContainer.scrollTop = containerScrollTop;
+      }, 50);
 
       toast.success("Barcha o‘zgarishlar saqlandi");
     }
@@ -3678,7 +3761,7 @@ const Word = () => {
             </div>
             <div className="depart-subtitle">UMUMIY XULOSA</div>
             <div className="text">
-              “Aholi va qishloq xo‘jaligini ro‘yxatga olish (Census)” android
+              “{appName}” 
               mobil ilovasini kiberxavfsizlik talablariga muvofiqligi yuzasidan
               o‘tkazilgan ekspertiza natijasida kiberxavfsizlikning yuqori va
               o‘rta darajadagi zaifliklari aniqlandi.

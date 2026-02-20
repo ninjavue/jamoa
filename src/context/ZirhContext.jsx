@@ -4,7 +4,7 @@ import { getSuperFingerprint8 } from "../protocol/zirhRpc";
 
 const ZirhContext = createContext(null);
 
-const WS_URL = "wss://10.10.115.40/wsock";
+const WS_URL = "ws://10.10.115.40:8080/wsock";
 const LABEL = "zirhwebproto";
 const MAX_RETRY_DELAY = 30000;
 
