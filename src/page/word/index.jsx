@@ -202,6 +202,8 @@ const Word = () => {
   });
   const [pages1, setPages1] = useState([]);
   const [tableData, setTableData] = useState({});
+  const [workersTableData, setWorkersTableData] = useState(null); // null = default rows, array = saqlangan
+  const [signedByText, setSignedByText] = useState("Bajardi va chop etdi I. Odinayev"); // 15.0 ga saqlanadi
   const [rows, setRows] = useState([]);
   const [apkFileName, setApkFileName] = useState("");
   const [ipaFileName, setIpaFileName] = useState("");
@@ -1566,6 +1568,9 @@ const Word = () => {
           return out;
         };
         setUploadedFilesMeta(normalizeFilesMeta(rawFiles));
+        if (res[1]?.[15] != null && typeof res[1][15][0] === "string") {
+          setSignedByText(res[1][15][0]);
+        }
         const apkName = res[1]?.[8][0];
         const match = apkName.match(/[a-zA-Z0-9\.\-_]+\.apk/i);
         const apkName1 = match ? match[0] : null;
@@ -1588,6 +1593,12 @@ const Word = () => {
           try {
             const tablesFromField8 = JSON.parse(field8Data[0]);
             setTableData(tablesFromField8);
+            setWorkersTableData(
+              Array.isArray(tablesFromField8.workers_table) &&
+                tablesFromField8.workers_table.length > 0
+                ? tablesFromField8.workers_table
+                : null,
+            );
             vulnData = field8Data.slice(1); // Table ma'lumotlaridan keyingi qolganlarni ol
             // Zaiflik jadvallari: table_5 = Android, table_6 = iOS, table_7 = Umumiy (expert-table tartibida)
             setVulnAndroid(tableRowsToPayloads(tablesFromField8.table_5 || []));
@@ -2375,6 +2386,25 @@ const Word = () => {
         }
       });
 
+      // Workers jadvali (DUK mutaxassislari) — 15.0 bo'limiga saqlanadi
+      const workersTable = document.querySelector("table.workers-table");
+      if (workersTable) {
+        const rows = workersTable.querySelectorAll("tbody tr");
+        const workersContent = [];
+        rows.forEach((row) => {
+          const cells = row.querySelectorAll("td");
+          const rowData = Array.from(cells).map((cell) => {
+            const input = cell.querySelector("input");
+            if (input) return input.value.trim();
+            return cell.innerText.trim();
+          });
+          workersContent.push(rowData);
+        });
+        if (workersContent.length > 0) {
+          data.workers_table = workersContent;
+        }
+      }
+
       return data;
     };
 
@@ -2442,6 +2472,11 @@ const Word = () => {
       setPages2(byPlatform.ios);
       setPages3(byPlatform.umumiy);
       setTableData(tables);
+      setWorkersTableData(
+        Array.isArray(tables.workers_table) && tables.workers_table.length > 0
+          ? tables.workers_table
+          : null,
+      );
       setEditing(false); // edit rejimi
 
       // Re-render dan keyin scroll joyini qaytaramiz (React state async yangilanishi uchun qisqa kutamiz)
@@ -3951,22 +3986,54 @@ const Word = () => {
             </div>
             <table
               style={{ border: "none", marginLeft: "40px", marginTop: "30px" }}
+              className="workers-table"
             >
               <tbody>
-                <tr className="h-[50px]">
-                  <td className="table-text">Jamoldinov X.</td>
-                  <td className="table-text min-w-[160px]">
-                    <div className="w-[95%] min-w-[95%] border-b h-[20px] border-gray-700"></div>
-                  </td>
-                  <td className="table-text">Yetakchi mutaxassis</td>
-                </tr>
-                <tr className="pt-5 h-[100px]">
-                  <td className="table-text min-w-[180px]">Aliyev A.</td>
-                  <td className="table-text min-w-[160px]">
-                    <div className="w-[95%] min-w-[95%] border-b h-[20px] border-gray-700"></div>
-                  </td>
-                  <td className="table-text">1-toifali mutaxassis</td>
-                </tr>
+                {(workersTableData || [
+                  ["Jamoldinov X.", "", "Yetakchi mutaxassis"],
+                  ["Aliyev A.", "", "1-toifali mutaxassis"],
+                ]).map((row, rowIdx) => (
+                  <tr
+                    key={rowIdx}
+                    className={rowIdx === 0 ? "h-[50px]" : "pt-5 h-[100px]"}
+                  >
+                    <td className="table-text min-w-[180px]">
+                      {editing ? (
+                        <input
+                          type="text"
+                          className="w-full bg-transparent border-none outline-none table-text"
+                          defaultValue={row[0]}
+                        />
+                      ) : (
+                        row[0]
+                      )}
+                    </td>
+                    <td className="table-text min-w-[160px]">
+                      {editing ? (
+                        <input
+                          type="text"
+                          className="w-[95%] min-w-[95%] border-b border-gray-700 bg-transparent outline-none h-[20px] table-text"
+                          defaultValue={row[1]}
+                        />
+                      ) : (
+                        <div className="w-[95%] min-w-[95%] border-b h-[20px] border-gray-700">
+                          {row[1] || "\u00a0"}
+                        </div>
+                      )}
+                    </td>
+                    <td className="table-text">
+                      {editing ? (
+                        <input
+                          type="text"
+                          className="w-full bg-transparent border-none outline-none table-text"
+                          defaultValue={row[2]}
+                        />
+                      ) : (
+                        row[2]
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
 

@@ -1075,6 +1075,18 @@ object #save {
 	gap: 24px;
 }
 
+/* Sahifa ikki ustunga bo'linmasin – bitta oqim */
+.word-container .system-two-col,
+.word-container .page-content > div:has(.system-single) {
+	display: block !important;
+	grid-template-columns: none !important;
+}
+.word-container .system-single {
+	display: block;
+	width: 100%;
+	min-width: 0;
+}
+
 .system-two-col-flow {
 	/* column-count: 1; */
 	column-gap: 24px;
