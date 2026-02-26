@@ -233,6 +233,7 @@ const Aside = () => {
         <img
           src="/assets/jamoa.png"
           alt="site logo"
+          className="sidebar-logo-img"
           style={{ width: 131, height: 146 }}
         />
         <span className="w-full opacity-100 h-[1.5px] flex bg-[#bb9769] transition-all duration-300"></span>
@@ -291,8 +292,8 @@ const Aside = () => {
                   <span>Mobil ekspertizalar</span>
                   {(expertiseUnread.mobil || 0) > 0 && (
                     <span className="flex justify-center w-5 text-sm h-5 bg-[#3b64ec] text-white items-center rounded-full ml-auto">
-                      {(expertiseUnread.mobil || 0) > 99
-                        ? "99+"
+                      {(expertiseUnread.mobil || 0) > 9
+                        ? "9+"
                         : expertiseUnread.mobil}
                     </span>
                   )}
@@ -358,7 +359,7 @@ const Aside = () => {
                   <span>Chat</span>
                   {chatUnreadTotal > 0 && (
                     <span className="flex justify-center w-5 text-sm h-5 bg-[#3b64ec] text-white items-center rounded-full ml-auto">
-                      {chatUnreadTotal > 99 ? "99+" : chatUnreadTotal}
+                      {chatUnreadTotal > 9 ? "9+" : chatUnreadTotal}
                     </span>
                   )}
                 </MenuLink>

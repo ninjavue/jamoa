@@ -34,7 +34,9 @@ const UserAdd = () => {
   const [items, setItems] = useState([]);
 
   const phoneToDisplay = (nineDigits) =>
-    nineDigits ? `+998${String(nineDigits).replace(/\D/g, "").slice(0, 9)}` : "";
+    nineDigits
+      ? `+998${String(nineDigits).replace(/\D/g, "").slice(0, 9)}`
+      : "";
   const phoneToStorage = (value) => {
     let digits = String(value || "").replace(/\D/g, "");
     if (digits.startsWith("998")) digits = digits.slice(3);
@@ -88,6 +90,7 @@ const UserAdd = () => {
     { value: "8", label: "Qayta ekspertiza" },
     { value: "9", label: "To'liq yakunlangan" },
     { value: "10", label: "Vaqtincha to'xtatilgan" },
+    { value: "11", label: "Shartnoma bekor qilingan" },
   ];
 
   const [expandedUserId, setExpandedUserId] = useState(null);
@@ -106,13 +109,23 @@ const UserAdd = () => {
       const roleStr = userRole(item.role);
       const departmentStr = userSection(item.department);
       return (
-        String(item.surname || "").toLowerCase().includes(term) ||
-        String(item.name || "").toLowerCase().includes(term) ||
-        String(item.partName || "").toLowerCase().includes(term) ||
-        String(item.email || "").toLowerCase().includes(term) ||
+        String(item.surname || "")
+          .toLowerCase()
+          .includes(term) ||
+        String(item.name || "")
+          .toLowerCase()
+          .includes(term) ||
+        String(item.partName || "")
+          .toLowerCase()
+          .includes(term) ||
+        String(item.email || "")
+          .toLowerCase()
+          .includes(term) ||
         roleStr.toLowerCase().includes(term) ||
         departmentStr.toLowerCase().includes(term) ||
-        String(item.phone || "").toLowerCase().includes(term)
+        String(item.phone || "")
+          .toLowerCase()
+          .includes(term)
       );
     });
   }, [items, searchTerm]);
@@ -133,9 +146,7 @@ const UserAdd = () => {
     return bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
   }
 
-  const fetchProfile = async () => {
- 
-  };
+  const fetchProfile = async () => {};
 
   const openDrawer = () => {
     setFormData({
@@ -156,15 +167,13 @@ const UserAdd = () => {
   const closeDrawer = () => setDrawerOpen(false);
 
   const downloadFileAll = async (id, size = 32420) => {
-  
-     return await downloadFileViaRpc(stRef, id, id, size, (p) => {
+    return await downloadFileViaRpc(stRef, id, id, size, (p) => {
       // console.log(p);
       setUploadProgress(p);
       setIsUploading(true);
       if (p === 100) setIsUploading(false);
     });
   };
-
 
   const getAllUser = async () => {
     try {
@@ -210,7 +219,7 @@ const UserAdd = () => {
                 ? rawOrderCount
                 : PROCESS_STEPS.reduce(
                     (acc, { value }) => ({ ...acc, [value]: { count: 0 } }),
-                    {}
+                    {},
                   );
 
             return {
@@ -232,7 +241,9 @@ const UserAdd = () => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Foydalanuvchilar ro‘yxati yuklanmadi. Ulanishni tekshiring.");
+      toast.error(
+        "Foydalanuvchilar ro‘yxati yuklanmadi. Ulanishni tekshiring.",
+      );
     }
   };
 
@@ -241,7 +252,8 @@ const UserAdd = () => {
     const isPhone = name === "phone";
     const nextValue = isPhone ? phoneToStorage(value) : value;
     setFormData((prev) => ({ ...prev, [name]: nextValue }));
-    if (fieldErrors[name]) setFieldErrors((prev) => ({ ...prev, [name]: false }));
+    if (fieldErrors[name])
+      setFieldErrors((prev) => ({ ...prev, [name]: false }));
 
     if (!isUpdate) return;
 
@@ -297,9 +309,9 @@ const UserAdd = () => {
     setIsUploading(true);
 
     const file = formData.image;
-    if(!file){
-      toast.error("Iltimos rasm tanlang!")
-      return
+    if (!file) {
+      toast.error("Iltimos rasm tanlang!");
+      return;
     }
 
     const doneRes = await uploadFileViaRpc(
@@ -316,8 +328,9 @@ const UserAdd = () => {
     // console.log(doneRes);
 
     formData.image = doneRes["fileId"];
-    // console.log(formData.image, doneRes["size"]) 
+    // console.log(formData.image, doneRes["size"])
     // return
+    console.log(phoneForBackend);
     const res = await sendRpcRequest(stRef, METHOD.USER_CREATE, {
       1: formData.surname,
       2: formData.name,
@@ -326,26 +339,52 @@ const UserAdd = () => {
       5: formData.role,
       6: formData.department,
       7: phoneForBackend,
-      8: {1: formData.image, 2: doneRes["size"]},
+      8: { 1: formData.image, 2: doneRes["size"] },
     });
 
-
-
-    if(res.status === METHOD.OK){
-      toast.success("Foydalanuvchi qo'shildi")
-    }else{
-      toast.error("Foydalanuvchi yaratishda xatolik")
+    if (res.status === METHOD.OK) {
+      toast.success("Foydalanuvchi qo'shildi");
+      setFormData({
+        surname: "",
+        name: "",
+        partName: "",
+        email: "",
+        role: "",
+        department: "",
+        phone: "",
+        image: "",
+      });
+      closeDrawer();
+    } else {
+      res[1]?.map((item) => {
+        switch (item?.field) {
+          case "1":
+            toast.error("Familiya xato kiritildi!");
+            break;
+          case "2":
+            toast.error("Ism xato kiritildi!");
+            break;
+          case "3":
+            toast.error("Otasini ismi xato kiritildi");
+            break;
+          case "4":
+            toast.error("Email maydoni not'g'ri kiritildi");
+            break;
+          case "7":
+            toast.error("Telefon raqam xato kiritildi!");
+          default:
+            toast.error("Foydalanuvchi yaratishda xatolik");
+            break;
+        }
+      });
     }
     const imageLink = await downloadFileAll(formData.image, doneRes?.size);
-    // URL.revokeObjectURL(formData.image);
     formData.image = imageLink;
     getAllUser();
 
-    // console.log("addUser:", res);
-
     const defaultOrderCount = PROCESS_STEPS.reduce(
       (acc, { value }) => ({ ...acc, [value]: { count: 0 } }),
-      {}
+      {},
     );
     setItems([
       ...items,
@@ -355,18 +394,6 @@ const UserAdd = () => {
         orderCount: defaultOrderCount,
       },
     ]);
-
-    setFormData({
-      surname: "",
-      name: "",
-      partName: "",
-      email: "",
-      role: "",
-      department: "",
-      phone: "",
-      image: "",
-    });
-    closeDrawer();
   };
 
   useEffect(() => {
@@ -464,7 +491,7 @@ const UserAdd = () => {
     try {
       const payload = { 1: formData.id };
 
-      const fileSize = formData?.image?.size
+      const fileSize = formData?.image?.size;
 
       if (formData.image && formData.image instanceof File) {
         setUploadProgress(0);
@@ -483,7 +510,6 @@ const UserAdd = () => {
         // console.log(uploadRes)
 
         formData.image = uploadRes["fileId"];
-   
       }
 
       const fieldMap = {
@@ -501,11 +527,11 @@ const UserAdd = () => {
       Object.keys(fieldMap).forEach((key) => {
         if (formData[key] !== editItemOld[key]) {
           const code = fieldMap[key];
-          
+
           if (key === "image") {
             payload[code] = {
               1: formData[key],
-              2: fileSize
+              2: fileSize,
             };
           } else if (key === "phone") {
             payload[code] = phoneToStorage(formData[key]);
@@ -514,7 +540,6 @@ const UserAdd = () => {
           } else {
             payload[code] = formData[key];
           }
-
 
           updatedFieldCodes.push(code);
         }
@@ -529,7 +554,6 @@ const UserAdd = () => {
       // return
       const res = await sendRpcRequest(stRef, METHOD.USER_UPDATE, payload);
       // console.log(res)
-
 
       if (res.status === METHOD.OK) {
         getAllUser();
@@ -856,7 +880,7 @@ const UserAdd = () => {
                       className="border-b border-gray-200 hover:bg-gray-50 dark:hover:bg-[#2e2f4b] transition-colors cursor-pointer"
                       onClick={() =>
                         setExpandedUserId((prev) =>
-                          prev === item.id ? null : item.id
+                          prev === item.id ? null : item.id,
                         )
                       }
                     >
@@ -915,9 +939,7 @@ const UserAdd = () => {
                                 className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 shrink-0"
                               >
                                 <span className="font-medium">{label}:</span>
-                                <span>
-                                  {getOrderCountForStep(item, value)}
-                                </span>
+                                <span>{getOrderCountForStep(item, value)}</span>
                               </div>
                             ))}
                           </div>

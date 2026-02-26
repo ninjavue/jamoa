@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { METHOD } from "../../api/zirhrpc";
 import { useZirhStref } from "../../context/ZirhContext";
 import Select from "react-select";
@@ -38,6 +38,11 @@ const ExpertizeModal = ({
   const [resource, setResource] = useState("");
   const [filteredVuln, setFilteredVuln] = useState([]);
   const [newDocVuln, setNewDocVuln] = useState({});
+  const submitLockRef = useRef(false);
+
+  useEffect(() => {
+    if (open) submitLockRef.current = false;
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -141,6 +146,8 @@ const ExpertizeModal = ({
 
   const handleSaveDoc = () => {
     if (!newDocVuln) return;
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
     const data = newDocVuln[1] ? [...newDocVuln[1]] : [];
     while (data.length < 5) data.push("");
     data[2] = zaiflikText ?? data[2] ?? "";

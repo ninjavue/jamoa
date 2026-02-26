@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FaPen, FaSave } from "react-icons/fa";
 import { useReactToPrint } from "react-to-print";
 import { useParams } from "react-router-dom";
@@ -22,8 +22,9 @@ const TOOLBAR_FONT_FAMILIES = [
   "Trebuchet MS",
   "Verdana",
   "Courier New",
+  "Orbitron"
 ];
-const TOOLBAR_FONT_SIZES = [10, 11, 12, 14, 16, 18, 20, 24, 30, 36];
+const TOOLBAR_FONT_SIZES = [10, 11, 12, 14, 16, 18, 20, 24, 30, 36, 42, 48, 52, 54, 58, 62, 64, 68, 72];
 const TOOLBAR_BLOCK_OPTIONS = [
   { label: "Oddiy matn", value: "p" },
   { label: "Sarlavha 1", value: "h1" },
@@ -46,6 +47,15 @@ const TOOLBAR_FONT_SIZE_TO_EXEC = {
   24: "8",
   30: "9",
   36: "10",
+  42: "11",
+  48: "12",
+  52: "13",
+  54: "14",
+  58: "15",
+  62: "16",
+  64: "17",
+  68: "18",
+  72: "19",
 };
 const IMAGE_UPLOAD_LOG_TAG = "[word-system:image]";
 const imageLog = (...args) => console.log(IMAGE_UPLOAD_LOG_TAG, ...args);
@@ -677,12 +687,6 @@ const takeRiskRows = (rows, startIndex, cap) => {
 
   while (i < safeRows.length && page.length < cap) {
     const row = safeRows[i];
-
-    // agar sahifa/ustun resource header bilan emas, vuln qatoridan boshlansa headerni takrorlab qo'yamiz
-    if (page.length === 0 && row?.type === "vuln" && row?.resourceLabel) {
-      page.push({ type: "resource", label: row.resourceLabel, repeated: true });
-    }
-
     page.push(row);
     i++;
   }
@@ -826,20 +830,6 @@ const takeRiskRowsByHeight = (
     while (i < safeRows.length) {
       let consumedIndex = false;
       let row = safeRows[i];
-
-      // agar sahifa/ustun resource header bilan emas, vuln qatoridan boshlansa headerni takrorlaymiz
-      if (out.length === 0 && row?.type === "vuln" && row?.resourceLabel) {
-        const injected = {
-          type: "resource",
-          label: row.resourceLabel,
-          repeated: true,
-        };
-        if (tryAppend(injected)) {
-          out.push(injected);
-        }
-        // injected row index iste'mol qilinmaydi
-        continue;
-      }
 
       // normal row
       consumedIndex = true;
@@ -1001,6 +991,12 @@ const SystemWord = () => {
   const [performedByText, setPerformedByText] = useState(
     "Bajardi va chop etdi I. Odinayev",
   );
+  /** Foydalanuvchi "X axborot tizimi" sarlavhasini o'zgartirsa, shu yerda saqlanadi; saqlashda field 8 (0-index) ga yoziladi */
+  const [systemTitleDisplay, setSystemTitleDisplay] = useState(null);
+  /** Sarlavha font size va font family (field 8, 0-index da saqlanadi) */
+  const [systemTitleFontSize, setSystemTitleFontSize] = useState(null);
+  const [systemTitleFontFamily, setSystemTitleFontFamily] = useState(null);
+  const [systemTitleFontWeight, setSystemTitleFontWeight] = useState(null);
   const [removedStaticPageIds, setRemovedStaticPageIds] = useState({});
   const [pages3, setPages3] = useState([]);
   const [tocPages, setTocPages] = useState([]);
@@ -1333,11 +1329,33 @@ const SystemWord = () => {
             8: 24,
             9: 30,
             10: 36,
+            11: 42,
+            12: 48,
+            13: 52,
+            14: 54,
+            15: 58,
+            16: 62,
+            17: 64,
+            18: 68,
+            19: 72,
           };
           const parsed = Number.parseInt(String(value), 10);
-          const px = fontSizeMap[parsed] || parsed;
+          const px = fontSizeMap[parsed] ?? parsed;
           if (!Number.isFinite(px) || px <= 0) return false;
-          block.style.fontSize = `${Math.max(8, Math.min(96, px))}px`;
+          const sizePx = `${Math.max(8, Math.min(96, px))}px`;
+          // Tanlangan matnni o‘rab turgan elementga qo‘llash (block emas), shunda font o‘lchami o‘sadi, faqat line-height emas
+          const anc = range.commonAncestorContainer;
+          const styleTarget =
+            anc?.nodeType === Node.TEXT_NODE
+              ? anc.parentElement
+              : anc instanceof Element
+                ? anc
+                : block;
+          if (styleTarget && block.contains(styleTarget)) {
+            styleTarget.style.fontSize = sizePx;
+            return true;
+          }
+          block.style.fontSize = sizePx;
           return true;
         }
         default:
@@ -1491,10 +1509,13 @@ const SystemWord = () => {
       }
 
       let commandApplied = false;
-      try {
-        commandApplied = document.execCommand(command, false, value);
-      } catch {
-        commandApplied = false;
+      // fontSize ni execCommand orqali chaqirmaymiz — brauzer line-height/legacy <font> qo‘llab, font o‘lchami to‘g‘ri o‘shmasligi mumkin
+      if (command !== "fontSize") {
+        try {
+          commandApplied = document.execCommand(command, false, value);
+        } catch {
+          commandApplied = false;
+        }
       }
 
       if (!commandApplied && command === "hiliteColor") {
@@ -1965,6 +1986,12 @@ const SystemWord = () => {
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: `${appName}-${Date.now()}`,
+    pageStyle: `
+      @page { size: A4; margin: 0; }
+      body, html { margin: 0 !important; padding: 0 !important; }
+      .word-container { padding: 0 !important; }
+      .word-pages .a4:last-child { page-break-after: auto !important; break-after: auto !important; }
+    `,
   });
 
   const startIndex = htmlContent.findIndex((p) =>
@@ -2998,7 +3025,6 @@ const SystemWord = () => {
             size: file?.size,
           })),
         );
-        // word/index.jsx dagi kabi: FileReader → img.onload → setTimeout 50 insert → setTimeout 300 resize + overflow
         imageFiles.forEach((file) => {
           const blobUrl = URL.createObjectURL(file);
           const imgElement = document.createElement("img");
@@ -3430,7 +3456,6 @@ const SystemWord = () => {
             runEditorCommand("justifyRight");
             break;
           case "j":
-            // Apply justify alignment using both execCommand and CSS for better compatibility
             runEditorCommand("justifyFull");
             // Also apply CSS text-align for better cross-browser support
             if (selection && selection.rangeCount > 0) {
@@ -3603,6 +3628,26 @@ const SystemWord = () => {
               ) {
                 setPerformedByText(dataFromField8.performedBy.trim());
               }
+              if (typeof dataFromField8.systemTitleDisplay === "string") {
+                setSystemTitleDisplay(dataFromField8.systemTitleDisplay.trim() || null);
+              } else {
+                setSystemTitleDisplay(null);
+              }
+              if (typeof dataFromField8.systemTitleFontSize === "string" && dataFromField8.systemTitleFontSize.trim()) {
+                setSystemTitleFontSize(dataFromField8.systemTitleFontSize.trim());
+              } else {
+                setSystemTitleFontSize(null);
+              }
+              if (typeof dataFromField8.systemTitleFontFamily === "string" && dataFromField8.systemTitleFontFamily.trim()) {
+                setSystemTitleFontFamily(dataFromField8.systemTitleFontFamily.trim());
+              } else {
+                setSystemTitleFontFamily(null);
+              }
+              if (typeof dataFromField8.systemTitleFontWeight === "string" && dataFromField8.systemTitleFontWeight.trim()) {
+                setSystemTitleFontWeight(dataFromField8.systemTitleFontWeight.trim());
+              } else {
+                setSystemTitleFontWeight(null);
+              }
             } else {
               // Eski format: faqat tables
               setTableData(dataFromField8);
@@ -3613,7 +3658,6 @@ const SystemWord = () => {
           }
         }
 
-        // Res'dan kelayotgan HTML stringlarini flatten qilish, raqamlarni tartiblab va page-number olib tashlash
         let expTitleIndex = 1;
         const flatVulnData = Array.isArray(vulnData)
           ? vulnData
@@ -3630,7 +3674,6 @@ const SystemWord = () => {
               return item;
             })
           : [];
-        // Field 15 (rasm fayllari) bo'yicha img teglariga data-file-id / data-file-size inject qilamiz
         const vulnDataWithFileIds = injectImageFileIdsIntoBlocks(
           flatVulnData,
           rawFiles,
@@ -3741,6 +3784,7 @@ const SystemWord = () => {
         .split("\n")
         .map((link) => link.trim())
         .filter((link) => link.length > 0);
+        console.log("Links: ", links)
       setObjectLinks(links);
     }
   }, [editing, objectLinksText]);
@@ -3750,7 +3794,6 @@ const SystemWord = () => {
     setSectionTablePages(pages);
   }, [sectionTableRowHtml]);
 
-  // Table ma'lumotlarini DOM'ga qayta yuklash (rasmlar bilan)
   useEffect(() => {
     if (Object.keys(tableData).length > 0) {
       const tables = document.querySelectorAll("table.editable-table");
@@ -3760,16 +3803,13 @@ const SystemWord = () => {
         if (tableData[key] && tableData[key].length > 0) {
           const tbody = table.querySelector("tbody");
           if (tbody) {
-            // Faqat agar data bo'lsa barcha qatorlarni o'chirish va yangilash
             tbody.innerHTML = "";
 
-            // Yangi rows'larni qo'shish
             tableData[key].forEach((rowData) => {
               const row = document.createElement("tr");
               rowData.forEach((cellData) => {
                 const cell = document.createElement("td");
 
-                // Agar cellData HTML bo'lsa (rasmlar bilan), innerHTML sifatida qo'shamiz
                 if (cellData.includes("<img") || cellData.includes("<IMG")) {
                   cell.innerHTML = sanitizePersistedImageHtml(cellData);
                 } else {
@@ -3850,10 +3890,10 @@ const SystemWord = () => {
     setModalOpen(false);
   };
 
-  const handleSaveDocFromModal = (docVuln) => {
+  const handleSaveDocFromModal = async (docVuln) => {
     if (!docVuln?.vuln || !Array.isArray(docVuln.vuln?.[1])) return;
-    generateVulnHtml(docVuln.vuln);
-    handleSubmit(docVuln);
+    const added = await handleSubmit(docVuln);
+    if (added) generateVulnHtml(docVuln.vuln);
   };
 
   const stripHtml = (html = "") => {
@@ -3863,7 +3903,6 @@ const SystemWord = () => {
     return doc.body.textContent || "";
   };
 
-  /** HTML bloklaridagi img teglariga data-file-id / data-file-size yo'q bo'lsa, field 15 ro'yxati bo'yicha tartibda inject qiladi */
   const injectImageFileIdsIntoBlocks = (blocks, filesArray) => {
     if (!Array.isArray(blocks) || blocks.length === 0) return blocks;
     const list = Array.isArray(filesArray)
@@ -3924,7 +3963,6 @@ const SystemWord = () => {
           currentSrc.startsWith("data:") || currentSrc.startsWith("blob:");
         const keepBlob = keepBlobIfHasFileId && fileId && isBlobOrData;
 
-        // data/blob/Base64 srclarni saqlamaymiz; bo'sh yoki noto'g'ri src bo'lmasin. Tahrir rejimida blob URL ni saqlaymiz.
         if (
           !keepBlob &&
           (!currentSrc ||
@@ -4090,11 +4128,6 @@ const SystemWord = () => {
     for (const r of resources) {
       const map = byResource.get(r);
       if (!map || map.size === 0) continue;
-      const shouldShowResourceHeader = (r || "").toLowerCase() !== "umumiy";
-      if (shouldShowResourceHeader) {
-        out.push({ type: "resource", label: r });
-      }
-
       const grouped = Array.from(map.values());
       grouped.sort((x, y) => {
         const px = levelPriority(x.level);
@@ -4205,10 +4238,9 @@ const SystemWord = () => {
         const subtitleText = (el?.textContent || "").trim();
         if (!subtitleText) return;
 
-        // faqat system-subtitle ichidagi matn: xohlasangiz prefiks raqamlarni olib tashlaymiz
         const title = subtitleText.replace(/^2\.2\.1\.\d+\.\s*/g, "").trim();
         if (!title || seen.has(title)) return;
-        if (TOC_HIDDEN_LABELS.includes(title)) return; // mundarijaga va ko‘rinishga kiritilmasin
+        if (TOC_HIDDEN_LABELS.includes(title)) return;
         seen.add(title);
 
         const resourceLabel = titleToResource.get(title) || "";
@@ -4365,14 +4397,12 @@ const SystemWord = () => {
     setTocPages(pages);
   }, [tocItemHtml, editing]);
 
-  // Sarlavha matnini solishtirish uchun normalizatsiya (bo'shliq, apostrof)
   const normalizeTitle = (s) =>
     (s || "")
       .trim()
       .replace(/\s+/g, " ")
       .replace(/[\u2018\u2019\u0027]/g, "'");
 
-  // newVuln elementlari blok (bitta div/p) yoki to'liq sahifa HTML bo'lishi mumkin; barchasini bloklar ro'yxatiga aylantiramiz
   const flattenNewVulnToBlocks = (items) => {
     const blocks = [];
     const parser = new DOMParser();
@@ -4397,7 +4427,6 @@ const SystemWord = () => {
     return blocks;
   };
 
-  // Zaiflikni jadvaldan va batafsil bo'limdan o'chirish (darajasi, nomi, tarifi, oqibatlari, tavsiyalar)
   const deleteVulnerability = (row) => {
     if (!editingRef.current) return;
     if (!row || row?.type !== "vuln") return;
@@ -4723,27 +4752,32 @@ const SystemWord = () => {
     const levelText = level === 1 ? "Yuqori" : level === 2 ? "O‘rta" : "Past";
 
     let newInnerHtml = "";
-    if (newVuln.length == 0) {
+    const hasNoRealNewVulnContent =
+      newVuln.length === 0 ||
+      (Array.isArray(newVuln) &&
+        newVuln.every(
+          (block) =>
+            typeof block !== "string" ||
+            isCaretAnchorBlock(block) ||
+            !stripHtml(block).trim()
+        ));
+    if (hasNoRealNewVulnContent) {
       newInnerHtml = `
 		<div class="system-bar-title">2.2. Ekspertiza natijalari bo‘yicha batafsil izoh</div>
 		<div class="system-subhead system-highlight">2.2.1. “${appName}” axborot tizimi</div>
 		<div class="system-subtitle">2.2.1.${vulnCounter}. ${title}</div>
 		<p class="system-paragraph"><b>Xavflilik darajasi:</b> ${levelText}.</p>
 		<p class="system-paragraph">${splitToInlineSpans(result)}</p>
-		<div class="system-subtitle">Ekspluatatsiya oqibatlari</div>
-		<p class="system-paragraph">${splitToInlineSpans(desc)}</p>
-		<div class="system-subtitle">Tavsiyalar</div>
-		<p class="system-paragraph">${splitToInlineSpans(recommendation)}</p>
+		<p class="system-paragraph"><b>Ekspluatatsiya oqibatlari: </b>${splitToInlineSpans(desc)}</p>
+		<p class="system-paragraph"><b>Tavsiyalar: </b>${splitToInlineSpans(recommendation)}</p>
 	`;
     } else {
       newInnerHtml = `
 		<div class="system-subtitle">2.2.1.${vulnCounter}. ${title}</div>
 		<p class="system-paragraph"><b>Xavflilik darajasi:</b> ${levelText}.</p>
 		<p class="system-paragraph">${splitToInlineSpans(result)}</p>
-		<div class="system-subtitle">Ekspluatatsiya oqibatlari</div>
-		<p class="system-paragraph">${splitToInlineSpans(desc)}</p>
-		<div class="system-subtitle">Tavsiyalar</div>
-		<p class="system-paragraph">${splitToInlineSpans(recommendation)}</p>
+		<p class="system-paragraph"><b>Ekspluatatsiya oqibatlari: </b>${splitToInlineSpans(desc)}</p>
+		<p class="system-paragraph"><b>Tavsiyalar: </b>${splitToInlineSpans(recommendation)}</p>
 	`;
     }
 
@@ -4778,7 +4812,7 @@ const SystemWord = () => {
   const handleSubmit = async (docVuln) => {
     try {
       const level = Number(docVuln?.vuln?.[1]?.[0]);
-      if (!level) return;
+      if (!level) return false;
       const vulnCountRaw = Number(docVuln?.vulnCount);
       const vulnCount =
         Number.isFinite(vulnCountRaw) && vulnCountRaw > 0
@@ -4793,22 +4827,40 @@ const SystemWord = () => {
       };
 
       const field = fieldMap[level];
-      if (!field) return;
+      if (!field) return false;
+
+      const newItem = {
+        a1: level,
+        a2: vulnCount,
+        a3: docVuln?.vuln?.[1]?.[1],
+        a4: resourceLabel,
+      };
+
+      const currentList =
+        Number(level) === 1
+          ? highVuln
+          : Number(level) === 2
+            ? mediumVuln
+            : lowVuln;
+      const newNameNorm = normalizeTitle(stripHtml(newItem.a3 || ""));
+      const newResourceNorm = normalizeResourceLabel(resourceLabel || "");
+      const isDuplicate = (Array.isArray(currentList) ? currentList : []).some(
+        (v) => {
+          const nameNorm = normalizeTitle(stripHtml(v?.a3 || ""));
+          const resNorm = normalizeResourceLabel(v?.a4 || "");
+          return nameNorm === newNameNorm && resNorm === newResourceNorm;
+        },
+      );
+      if (isDuplicate) {
+        toast.error("Bu zaiflik allaqachon qo'shilgan");
+        return false;
+      }
 
       const payload = {
         19: id,
-        [field]: [
-          {
-            a1: level,
-            a2: vulnCount,
-            a3: docVuln?.vuln?.[1]?.[1],
-            a4: resourceLabel,
-          },
-        ],
+        [field]: [newItem],
       };
 
-      // console.log(docVuln);
-      const newItem = payload?.[field]?.[0];
       if (newItem) {
         if (Number(level) === 1)
           setHighVuln((prev) => [...(prev || []), newItem]);
@@ -4822,8 +4874,10 @@ const SystemWord = () => {
       queueRiskLayoutRefresh();
 
       await sendRpcRequest(stRef, METHOD.ORDER_UPDATE, payload);
+      return true;
     } catch (error) {
       console.error(error);
+      return false;
     }
   };
 
@@ -5052,7 +5106,6 @@ const SystemWord = () => {
       const item = workQueue.shift();
       if (!item) continue;
       if (isManualPageBreakBlock(item)) {
-        // Eski saqlangan manual-page-break markerlar endi oqimni bo'lmaydi.
         continue;
       }
 
@@ -5087,7 +5140,6 @@ const SystemWord = () => {
           resetMeasureWithBlocks(currentPage);
           continue;
         }
-        // Bitta juda baland blok bo'lsa ham yo'qolib qolmasligi uchun alohida sahifaga qo'yamiz.
         pages.push([item]);
         currentPage = [];
         measureFlow.innerHTML = "";
@@ -5100,8 +5152,8 @@ const SystemWord = () => {
       pages.push(currentPage);
     }
 
-    // Ikki sahifa chegarasida katta bo'sh joy qolib ketmasligi uchun
-    // keyingi sahifadagi bosh blokni oldingi sahifaga qaytarib joylaymiz.
+   
+    
     let rebalanced = true;
     let rebalanceGuard = 0;
     while (rebalanced && rebalanceGuard < 300) {
@@ -5172,8 +5224,7 @@ const SystemWord = () => {
       const pageBlocks = [];
       Array.from(normalizedChildren).forEach((child) => {
         if (!child) return;
-        // Clone ustida sanitize — live DOM o‘zgarishsiz qoladi (blob + data-file-id saqlanadi)
-        // data-file-id bor rasmlarda blob ni saqlaymiz, re-render da rasm ko‘rinsin
+        
         const clone = child.cloneNode(true);
         if (clone.querySelectorAll) {
           clone
@@ -5198,7 +5249,7 @@ const SystemWord = () => {
           clone.nodeType === Node.ELEMENT_NODE &&
           typeof clone.outerHTML === "string"
         ) {
-          // SPAN (past qilingan rasm), P va boshqa elementlar — img tegi saqlansin
+          
           pageBlocks.push(clone.outerHTML);
         }
       });
@@ -5244,7 +5295,7 @@ const SystemWord = () => {
     setPages3(result);
   }, [newVuln]);
 
-  // Rasm yuklanayotgan bo‘lsa (data-file-id yo‘q) sync qilmaymiz — DOM ustidan yozib ketmaslik uchun
+
   const hasImagesUploading = useCallback(() => {
     const imgs = document.querySelectorAll(
       ".page-content.editable.new-content img, .editable-table img",
@@ -5259,8 +5310,6 @@ const SystemWord = () => {
     return false;
   }, []);
 
-  // Rasm pastiga matn yozilganda re-render da kontent yo‘qolmasligi uchun:
-  // DOM dagi .new-content ni newVuln ga sinxronlaymiz (keyup da debounce bilan).
   const syncNewContentFromDom = useCallback(
     (options = {}) => {
       const force = Boolean(options?.force);
@@ -5272,7 +5321,6 @@ const SystemWord = () => {
       }
       newVulnSnapshotRef.current = sanitizedBlocks;
       setNewVuln(sanitizedBlocks);
-      // pages3 ni ham shu yerda yangilaymiz, re-render da eski pages3 ishlatilmasligi uchun
       setPages3(paginateContent(sanitizedBlocks));
     },
     [hasImagesUploading],
@@ -5416,6 +5464,28 @@ const SystemWord = () => {
         if (t) performedByToSave = t;
       }
 
+      // "X axborot tizimi" sarlavhasini (matn + font size/family) DOM'dan o'qib saqlash (field 8, 0-index ga)
+      let systemTitleDisplayToSave = systemTitleDisplay;
+      let systemTitleFontSizeToSave = systemTitleFontSize;
+      let systemTitleFontFamilyToSave = systemTitleFontFamily;
+      let systemTitleFontWeightToSave = systemTitleFontWeight;
+      const systemTitleEl = document.querySelector(
+        ".system-first .application-name.system",
+      );
+      if (systemTitleEl) {
+        const t = (systemTitleEl.textContent || "").trim();
+        if (t) systemTitleDisplayToSave = t;
+        // Toolbar font o'zgartirganda ichki span yaratiladi; ko'rinadigan fontni olish uchun birinchi element yoki o'zini o'qiymiz
+        const styleTarget = systemTitleEl.firstElementChild || systemTitleEl;
+        const style = window.getComputedStyle(styleTarget);
+        const fs = (styleTarget.style?.fontSize || systemTitleEl.style?.fontSize || style.fontSize || "").trim();
+        const ff = (styleTarget.style?.fontFamily || systemTitleEl.style?.fontFamily || style.fontFamily || "").trim();
+        const fw = (styleTarget.style?.fontWeight || systemTitleEl.style?.fontWeight || style.fontWeight || "").trim();
+        if (fs) systemTitleFontSizeToSave = fs;
+        if (ff) systemTitleFontFamilyToSave = ff;
+        if (fw) systemTitleFontWeightToSave = fw;
+      }
+
       const tablesAndLinksJson = JSON.stringify({
         tables: tablesForServer,
         objectLinks: currentLinks,
@@ -5424,6 +5494,10 @@ const SystemWord = () => {
         removedStaticPageIds,
         workersTable: workersToSave,
         performedBy: performedByToSave,
+        systemTitleDisplay: systemTitleDisplayToSave ?? null,
+        systemTitleFontSize: systemTitleFontSizeToSave ?? null,
+        systemTitleFontFamily: systemTitleFontFamilyToSave ?? null,
+        systemTitleFontWeight: systemTitleFontWeightToSave ?? null,
       });
 
       const field8Data = [tablesAndLinksJson, ...pagedForServer];
@@ -5442,6 +5516,10 @@ const SystemWord = () => {
       setTableData(tablesForState);
       setWorkersTableRows(workersToSave);
       setPerformedByText(performedByToSave);
+      if (systemTitleDisplayToSave != null) setSystemTitleDisplay(systemTitleDisplayToSave);
+      if (systemTitleFontSizeToSave != null) setSystemTitleFontSize(systemTitleFontSizeToSave);
+      if (systemTitleFontFamilyToSave != null) setSystemTitleFontFamily(systemTitleFontFamilyToSave);
+      if (systemTitleFontWeightToSave != null) setSystemTitleFontWeight(systemTitleFontWeightToSave);
       setDomRenderRevision((prev) => prev + 1);
       setEditing(false);
       updateEditorStats({ force: true });
@@ -5556,12 +5634,7 @@ const SystemWord = () => {
       });
       imageLog("handlePasteImage field15 save response", saveRes);
 
-      // DOM da data-file-id bor endi — state ni sinxronlaymiz, re-render da rasm (id + placeholder) yo‘qolmasin
       syncNewContentFromDomRef.current?.({ force: true });
-
-      // setUploadedFilesMeta chaqirmaymiz — re-render DOM ni qayta chizadi va past qilingan rasm yo‘qoladi.
-      // Rasmda data-file-id va data-file-size bor; resolveStoredImages (tahrir yopilganda) shu orqali blob oladi.
-      // Sahifa qayta yuklanganda meta serverdan (field 15) keladi.
       return fileId || null;
     } catch (error) {
       imageLogError("handlePasteImage error", error);
@@ -5646,7 +5719,6 @@ const SystemWord = () => {
     };
   }, []);
 
-  // ORDER_GET_ID dan kelgan 15-field bo'yicha rasmlarni fileId orqali yuklab, blob URL ni img.src ga o'rnatish. Tahrir rejimida ham blob saqlanadi.
   useEffect(() => {
     const meta = uploadedFilesMeta || {};
 
@@ -6273,13 +6345,35 @@ const SystemWord = () => {
         >
           <div className="a4 first-a4 system system-first">
             <div
-              className="page-content flex justify-center"
+              className="page-content flex justify-center editable"
               style={{ justifyContent: "center" }}
             >
               <h2
                 className={`application-name system ${appName.length > 20 ? "mb-[50px]" : "mt-[50px]"}`}
+                style={{
+                  ...(systemTitleFontSize ? { fontSize: systemTitleFontSize } : {}),
+                  ...(systemTitleFontFamily ? { fontFamily: systemTitleFontFamily } : {}),
+                  ...(systemTitleFontWeight ? { fontWeight: systemTitleFontWeight } : {}),
+                }}
+                contentEditable={editing}
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  const el = e.currentTarget;
+                  const t = (el.textContent || "").trim();
+                  setSystemTitleDisplay(t || null);
+                  const styleTarget = el.firstElementChild || el;
+                  const style = window.getComputedStyle(styleTarget);
+                  const fs = (styleTarget.style?.fontSize || el.style?.fontSize || style.fontSize || "").trim();
+                  const ff = (styleTarget.style?.fontFamily || el.style?.fontFamily || style.fontFamily || "").trim();
+                  const fw = (styleTarget.style?.fontWeight || el.style?.fontWeight || style.fontWeight || "").trim();
+                  if (fs) setSystemTitleFontSize(fs);
+                  if (ff) setSystemTitleFontFamily(ff);
+                  if (fw) setSystemTitleFontWeight(fw);
+                }}
               >
-                “{appName}” axborot tizimi{" "}
+                {systemTitleDisplay !== null && systemTitleDisplay !== ""
+                  ? systemTitleDisplay
+                  : `"${appName}" axborot tizimi`}
               </h2>
             </div>
           </div>
@@ -6430,14 +6524,15 @@ const SystemWord = () => {
                     />
                   </div>
                 ) : objectLinks.length === 1 ? (
-                  <p className="system-paragraph">
-                    <b>"{objectLinks[0]}"</b> URL manzilida joylashgan "
-                    {appName}" axborot tizimi.
-                  </p>
-                ) : (
                   <>
                     <p className="system-paragraph">
-                      “{appName}” axborot tizimining quyidagi resurslari:
+                      <b> "{objectLinks[0]}"</b> URL manzilida joylashgan  
+                      <b> "{appName}"</b> axborot tizimi.
+                    </p>
+                    {objectLinks.length > 1 && (
+                  <>
+                    <p className="system-paragraph">
+                     <b> “{appName}”</b> axborot tizimining quyidagi resurslari:
                     </p>
                     <ul className="system-list">
                       {objectLinks.map((link) => (
@@ -6445,7 +6540,9 @@ const SystemWord = () => {
                       ))}
                     </ul>
                   </>
-                )}
+                    )}
+                  </>
+                ) : null}
                 <div className="system-bar-title">
                   1.4. Ekspertiza o‘tkazish tartibi
                 </div>
@@ -7164,31 +7261,31 @@ const SystemWord = () => {
               </div>
 
               <div className="absolute bottom-6">
-                <p className="system-paragraph">
-                  Ro'yhat tartib raqami _______-XDFU-son
+                <p className="system-paragraph1">
+                  Ro'yxat tartib raqami _______-XDFU-son
                 </p>
-                <p className="system-paragraph">
+                <p className="system-paragraph1">
                   Kompyuterda ikki nusxada chop etildi.
                 </p>
-                <p className="system-paragraph">
+                <p className="system-paragraph1">
                   Fayl saqlanmadi. Xomaki matnsiz.
                 </p>
-                <p className="system-paragraph">
+                <p className="system-paragraph1 max-w-[300px]" style={{lineHeight: "1.5"}}>
                   1-nusxa - "{orgName}" {orgTypeName} ga
                 </p>
-                <p className="system-paragraph">
+                <p className="system-paragraph1">
                   2-nusxa - Nazorat va hujjatlar
                 </p>
-                <p className="system-paragraph">aylanishi bo'limi jildiga</p>
+                <p className="system-paragraph1">aylanishi bo'limi jildiga</p>
                 <p
-                  className="system-paragraph performed-by-text"
+                  className="system-paragraph1 performed-by-text"
                   contentEditable={editing}
                   suppressContentEditableWarning
                 >
                   {performedByText}
                 </p>
-                <p className="system-paragraph">Tel.: (71) 203-00-24</p>
-                <p className="system-paragraph">
+                <p className="system-paragraph1">Tel.: (71) 203-00-24</p>
+                <p className="system-paragraph1">
                   {new Date().getFullYear()}-yil "_____"-_____________
                 </p>
               </div>

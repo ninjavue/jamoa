@@ -127,6 +127,21 @@ const fourthSection = [
   },
 ];
 
+// pages3 (umumiy) bo'limi uchun default sahifa: 2.4 Tashqi resurslar monitoringi
+const getDefaultPages3 = () => [
+  [
+    '<div class="title">2.4. Mobil ilova tashqi resurslari monitoringi natijalari bo\'yicha batafsil izoh</div>',
+    '<div class="exp-title">2.4.1. Mobil ilova va server o\'rtasidagi so\'rovlarni o\'rganish jarayoni</div>',
+    '<div class="text">Tashqi resurslar to\'g\'risidagi ma\'lumotlar Android/iOS mobil ilovalari tomonidan uzatiladigan va qabul qilinadigan ma\'lumotlarni o\'rganish, manba kodida havolalarni qidirish va ilova mijozining (ilovaning asosiy domeni) rasmiy resurslarini monitoring qilish jarayonida aniqlandi.</div>',
+    '<div class="text-i my-3 underline">6-jadval. Mobil ilova tashqi resurslari</div>',
+    '<div class="default-table-wrapper" data-default-table="6"><table class="expert-table editable-table default-resource-table"><thead><tr><th style="width:40px;min-width:40px">T/r</th><th style="width:220px;min-width:180px">Domen</th><th style="width:120px;min-width:100px">IP manzili</th></tr></thead><tbody><tr><td>1.</td><td>example.uz</td><td>192.168.0.1</td></tr></tbody></table></div>',
+    '<div class="text">Tashqi IP manzillarni o\'rganish jarayonida har bir IP manzilda bir qancha "ochiq" portlar aniqlandi.</div>',
+    '<div class="text-i my-3 underline">7-jadval. Ochiq portlar</div>',
+    '<div class="default-table-wrapper" data-default-table="7"><table class="expert-table editable-table default-resource-table"><thead><tr><th style="width:40px;min-width:40px">T/r</th><th style="width:110px;min-width:90px">IP manzil</th><th style="width:240px;min-width:200px">Ochiq portlar</th></tr></thead><tbody><tr><td>1.</td><td>192.168.0.1</td><td>80/tcp</td></tr></tbody></table></div>',
+    '<div class="text">Mobil ilovaning ichki va tashqi resurslari monitoringi jarayonida axborot xavfsizligi zaifliklari aniqlanmadi.</div>',
+  ],
+];
+
 const vulnerabilityTemplates = {
   integrity: `
     <div class="a4">
@@ -212,12 +227,11 @@ const Word = () => {
   const [vulnUm, setVulnUm] = useState([]);
   const [platform, setPlatform] = useState("");
   const [pages2, setPages2] = useState([]);
-  const [pages3, setPages3] = useState([]);
+  const [pages3, setPages3] = useState(() => getDefaultPages3());
   const [uploadedFilesMeta, setUploadedFilesMeta] = useState({});
   const editingRef = useRef(false);
   const savedSelectionRef = useRef(null);
 
-  // Sinxron: tahrirlash rejimiga kirganda/ketchganda ref yangilanadi
   useEffect(() => {
     editingRef.current = editing;
   }, [editing]);
@@ -369,6 +383,20 @@ const Word = () => {
       const blocks = Array.from(content.children)
         .filter((el) => el.nodeType === Node.ELEMENT_NODE)
         .map((el) => {
+          // Default jadval: wrapper tashqi div ichida (dangerouslySetInnerHTML), plus va o'chirish ustunini saqlashda olib tashlash
+          const wrapper = el.classList?.contains("default-table-wrapper")
+            ? el
+            : el.querySelector?.(".default-table-wrapper");
+          if (wrapper) {
+            const clone = wrapper.cloneNode(true);
+            clone.querySelector(".default-table-add-row")?.remove();
+            const table = clone.querySelector("table");
+            if (table) {
+              table.querySelectorAll("thead tr th.default-table-delete-cell").forEach((th) => th.remove());
+              table.querySelectorAll("tbody tr td.default-table-delete-cell").forEach((td) => td.remove());
+            }
+            return clone.outerHTML;
+          }
           if (el.tagName === "DIV") {
             const hasNested =
               el.querySelector("div") &&
@@ -923,13 +951,12 @@ const Word = () => {
               ? new File([blob], safeName, { type: safeType })
               : new File([blob], safeName, { type: safeType });
 
-          const reader = new FileReader();
+          // Rasmni har doim blob formatda ko'rsatish (url = blob:)
+          const blobUrl = URL.createObjectURL(blob);
+          const imgElement = document.createElement("img");
+          imgElement.src = blobUrl;
 
-          reader.onload = (event) => {
-            const imgElement = document.createElement("img");
-            imgElement.src = event.target.result;
-
-            imgElement.onload = () => {
+          imgElement.onload = () => {
               // Image loaded, resize it
               const maxWidth = 500;
               if (imgElement.width > maxWidth) {
@@ -999,9 +1026,6 @@ const Word = () => {
                 }, 300);
               }, 50);
             };
-          };
-
-          reader.readAsDataURL(blob);
         }
       }
 
@@ -1214,32 +1238,27 @@ const Word = () => {
                   ? new File([blob], safeName, { type: safeType })
                   : new File([blob], safeName, { type: safeType });
 
-              const reader = new FileReader();
+              const blobUrl = URL.createObjectURL(blob);
+              const imgElement = document.createElement("img");
+              imgElement.src = blobUrl;
+              imgElement.style.maxWidth = "100%";
+              imgElement.style.height = "auto";
+              imgElement.style.display = "block";
+              imgElement.style.margin = "5px 0";
 
-              reader.onload = (event) => {
-                const imgElement = document.createElement("img");
-                imgElement.src = event.target.result;
-                imgElement.style.maxWidth = "100%";
-                imgElement.style.height = "auto";
-                imgElement.style.display = "block";
-                imgElement.style.margin = "5px 0";
+              const selection = window.getSelection();
+              if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                range.insertNode(imgElement);
+                range.setStartAfter(imgElement);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+              }
 
-                const selection = window.getSelection();
-                if (selection.rangeCount > 0) {
-                  const range = selection.getRangeAt(0);
-                  range.insertNode(imgElement);
-                  range.setStartAfter(imgElement);
-                  range.collapse(true);
-                  selection.removeAllRanges();
-                  selection.addRange(range);
-                }
-
-                uploadPastedImageToServer(uploadFile, imgElement).catch(
-                  () => {},
-                );
-              };
-
-              reader.readAsDataURL(blob);
+              uploadPastedImageToServer(uploadFile, imgElement).catch(
+                () => {},
+              );
             }
           }
 
@@ -1482,6 +1501,146 @@ const Word = () => {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [editing, syncFromDOMAndFilterEmpty]);
 
+  // Default jadvallar (2.4): tahrirlash rejimida plus (qator qo'shish) va qator o'chirish
+  useEffect(() => {
+    const container = document.querySelector(".word-container");
+    if (!container) return;
+
+    const wrappers = container.querySelectorAll(".default-table-wrapper");
+    if (wrappers.length === 0) return;
+
+    const renumberFirstColumn = (tbody) => {
+      const rows = tbody.querySelectorAll("tr");
+      rows.forEach((tr, i) => {
+        const firstTd = tr.querySelector("td:first-child");
+        if (firstTd && !firstTd.classList.contains("default-table-delete-cell"))
+          firstTd.textContent = `${i + 1}.`;
+      });
+    };
+
+    const syncAfterChange = () => {
+      setTimeout(() => {
+        syncFromDOMAndFilterEmpty?.();
+        handlePageOverflow?.();
+      }, 50);
+    };
+
+    if (editing) {
+      wrappers.forEach((wrapper) => {
+        const table = wrapper.querySelector("table");
+        if (!table) return;
+
+        // Plus tugmasi – bitta marta qo'shamiz
+        if (!wrapper.querySelector(".default-table-add-row")) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "default-table-add-row";
+          btn.title = "Qator qo'shish";
+          btn.textContent = "+";
+          btn.addEventListener("click", () => {
+            const tbody = table.querySelector("tbody");
+            if (!tbody) return;
+            const rows = tbody.querySelectorAll("tr");
+            const lastRow = rows[rows.length - 1];
+            if (!lastRow) return;
+            const newRow = lastRow.cloneNode(true);
+            const delTd = newRow.querySelector("td.default-table-delete-cell");
+            if (delTd) delTd.remove();
+            Array.from(newRow.querySelectorAll("td")).forEach((td, idx) => {
+              if (idx === 0) td.textContent = `${rows.length + 1}.`;
+              else td.textContent = "";
+            });
+            tbody.appendChild(newRow);
+            const td = document.createElement("td");
+            td.className = "default-table-delete-cell";
+            const delBtn = document.createElement("button");
+            delBtn.type = "button";
+            delBtn.className = "default-table-delete-row";
+            delBtn.textContent = "×";
+            delBtn.addEventListener("click", () => {
+              newRow.remove();
+              renumberFirstColumn(tbody);
+              syncAfterChange();
+            });
+            td.appendChild(delBtn);
+            newRow.appendChild(td);
+            renumberFirstColumn(tbody);
+            syncAfterChange();
+          });
+          wrapper.appendChild(btn);
+        }
+
+        const thead = table.querySelector("thead tr");
+        const tbody = table.querySelector("tbody");
+        if (!thead || !tbody) return;
+
+        // Thead ga o'chirish ustuni (bitta marta)
+        if (!thead.querySelector("th.default-table-delete-cell")) {
+          const th = document.createElement("th");
+          th.className = "default-table-delete-cell";
+          th.style.width = "36px";
+          th.style.minWidth = "36px";
+          th.innerHTML = " ";
+          thead.appendChild(th);
+        }
+
+        // Har bir qatorga o'chirish tugmasi
+        tbody.querySelectorAll("tr").forEach((tr) => {
+          if (tr.querySelector(".default-table-delete-cell")) return;
+          const td = document.createElement("td");
+          td.className = "default-table-delete-cell";
+          const delBtn = document.createElement("button");
+          delBtn.type = "button";
+          delBtn.className = "default-table-delete-row";
+          delBtn.textContent = "×";
+          delBtn.addEventListener("click", () => {
+            tr.remove();
+            renumberFirstColumn(tbody);
+            syncAfterChange();
+          });
+          td.appendChild(delBtn);
+          tr.appendChild(td);
+        });
+      });
+    } else {
+      // Tahrirlash yopilganda: plus va o'chirish ustunini olib tashlash
+      wrappers.forEach((wrapper) => {
+        const addBtn = wrapper.querySelector(".default-table-add-row");
+        if (addBtn) addBtn.remove();
+
+        const table = wrapper.querySelector("table");
+        if (!table) return;
+        const thead = table.querySelector("thead tr");
+        if (thead) {
+          const thDel = thead.querySelector("th.default-table-delete-cell");
+          if (thDel) thDel.remove();
+        }
+        table.querySelectorAll("tbody tr").forEach((tr) => {
+          const tdDel = tr.querySelector("td.default-table-delete-cell");
+          if (tdDel) tdDel.remove();
+        });
+      });
+    }
+
+    return () => {
+      wrappers.forEach((wrapper) => {
+        const addBtn = wrapper.querySelector(".default-table-add-row");
+        if (addBtn) addBtn.remove();
+        const table = wrapper.querySelector("table");
+        if (!table) return;
+        const thead = table.querySelector("thead tr");
+        if (thead) {
+          const thDel = thead.querySelector("th.default-table-delete-cell");
+          if (thDel) thDel.remove();
+        }
+        table.querySelectorAll("tbody tr").forEach((tr) => {
+          const tdDel = tr.querySelector("td.default-table-delete-cell");
+          if (tdDel) tdDel.remove();
+        });
+      });
+    };
+  }, [editing, pages3, syncFromDOMAndFilterEmpty]);
+
   const paginateHtml = (html) => {
     const measure = document.createElement("div");
     measure.style.width = "794px";
@@ -1697,9 +1856,8 @@ const Word = () => {
     // console.log(highVuln);
   }, []);
 
-  // Field 15 (yuklangan fayllar) bo'yicha rasmlarni fileId orqali yuklab, blob URL ni img.src ga o'rnatish
+  // Field 15 (yuklangan fayllar) bo'yicha rasmlarni fileId orqali yuklab, blob URL ni img.src ga o'rnatish (tahrirlashda ham blob saqlanadi)
   useEffect(() => {
-    if (editing) return;
     const meta = uploadedFilesMeta || {};
     const blobUrls = resolvedBlobUrlsRef.current;
     let cancelled = false;
@@ -1717,10 +1875,11 @@ const Word = () => {
         const dfidRaw =
           img.getAttribute("data-file-id") || img.dataset?.fileId || "";
         if (!dfidRaw) continue;
+        // Blob allaqachon o'rnatilgan bo'lsa qayta yuklamaslik (tahrirlashda ham src olib tashlanmasin)
         if (
           img.dataset?.srcResolved === "true" &&
           img.src &&
-          !img.src.startsWith("data:")
+          img.src.startsWith("blob:")
         )
           continue;
 
@@ -2019,7 +2178,7 @@ const Word = () => {
     const title = stripHtml(vulnData?.[1]?.[1]);
     const result = stripHtml(vulnData?.[1]?.[2]);
     const desc = stripHtml(vulnData?.[1]?.[3]);
-    const recommendation = stripHtml(vulnData?.[1]?.[4]);
+    const recommendation = stripHtml(vulnData?.[1]?.[4]); 
 
     const levelText = level === 1 ? "Yuqori" : level === 2 ? "O‘rta" : "Past";
 
@@ -2032,8 +2191,13 @@ const Word = () => {
     const platformTitle =
       platformTitleMap[platformKey] || platformTitleMap.android;
 
+    // Umumiy bo'limida "2.2. ... mobil ilova va server o'rtasidagi so'rovlarni o'rganish..." sarlavhasi chiqmasin; faqat android va ios da birinchi zaiflikda chiqadi
+    const isFirstForPlatform = (newVuln?.[platformKey] || []).length === 0;
+    const showPlatformTitle =
+      isFirstForPlatform && (platformKey === "android" || platformKey === "ios");
+
     let newInnerHtml = "";
-    if ((newVuln?.[platformKey] || []).length === 0) {
+    if (showPlatformTitle) {
       newInnerHtml = `
     <div class="title">${platformTitle}</div>
     <div class="exp-title">2.2.${vulnCounter} ${title}</div>
@@ -2248,9 +2412,24 @@ const Word = () => {
     const iosBlocks = sortVulnBlocks(newVuln?.ios || []);
     const umumiyBlocks = sortVulnBlocks(newVuln?.umumiy || []);
 
+    // Umumiy: default (2.4, jadvallar) doim birinchi, zaifliklar pastida. Saqlangan ma'lumotda default bor bo'lsa qayta qo'shamiz.
+    const defaultUmumiyBlocks = getDefaultPages3()[0] || [];
+    const alreadyHasDefault =
+      umumiyBlocks.length > 0 &&
+      String(umumiyBlocks[0] || "").includes(
+        "2.4. Mobil ilova tashqi resurslari",
+      );
+    const allUmumiyBlocks = alreadyHasDefault
+      ? umumiyBlocks
+      : [...defaultUmumiyBlocks, ...umumiyBlocks];
+
     setPages1(androidBlocks.length ? paginateContent(androidBlocks) : []);
     setPages2(iosBlocks.length ? paginateContent(iosBlocks) : []);
-    setPages3(umumiyBlocks.length ? paginateContent(umumiyBlocks) : []);
+    setPages3(
+      allUmumiyBlocks.length
+        ? paginateContent(allUmumiyBlocks)
+        : getDefaultPages3(),
+    );
   }, [newVuln]);
 
   const handleInput = (pageContent) => {
@@ -2337,6 +2516,21 @@ const Word = () => {
       Array.from(page.children)
         .filter((child) => child.nodeType === Node.ELEMENT_NODE)
         .forEach((child) => {
+          const wrapper =
+            child.classList?.contains("default-table-wrapper")
+              ? child
+              : child.querySelector?.(".default-table-wrapper");
+          if (wrapper) {
+            const clone = wrapper.cloneNode(true);
+            clone.querySelector(".default-table-add-row")?.remove();
+            const table = clone.querySelector("table");
+            if (table) {
+              table.querySelectorAll("thead tr th.default-table-delete-cell").forEach((th) => th.remove());
+              table.querySelectorAll("tbody tr td.default-table-delete-cell").forEach((td) => td.remove());
+            }
+            pageBlocks.push(clone.outerHTML);
+            return;
+          }
           if (child.tagName === "DIV") {
             const hasNestedDivs = child.querySelector("div") !== null;
             const hasImportantClass =
@@ -2410,10 +2604,12 @@ const Word = () => {
 
     const tables = extractTableData();
 
-    // Base64 ni img src dan olib tashlash - hech qachon src ichida base64 yuborilmasin
-    const stripBase64FromImgSrc = (str) => {
+    // Faqat serverni yuborishda: data: va blob: ni olib tashlash, DOM/state da src boshqa joyda o'zgartirilmasin
+    const stripInlineImageSrcForSave = (str) => {
       if (typeof str !== "string") return str;
-      return str.replace(/src=["']data:image[^"']*["']/gi, 'src=""');
+      return str
+        .replace(/src=["']data:image[^"']*["']/gi, 'src=""')
+        .replace(/src=["']blob:[^"']*["']/gi, 'src=""');
     };
 
     const processTablesForSave = (tbl) => {
@@ -2421,7 +2617,7 @@ const Word = () => {
       for (const [key, rows] of Object.entries(tbl)) {
         result[key] = rows.map((row) =>
           row.map((cell) =>
-            typeof cell === "string" ? stripBase64FromImgSrc(cell) : cell,
+            typeof cell === "string" ? stripInlineImageSrcForSave(cell) : cell,
           ),
         );
       }
@@ -2431,7 +2627,7 @@ const Word = () => {
     const processPagedForSave = (pages) =>
       pages.map((page) =>
         page.map((block) =>
-          typeof block === "string" ? stripBase64FromImgSrc(block) : block,
+          typeof block === "string" ? stripInlineImageSrcForSave(block) : block,
         ),
       );
 
@@ -2615,7 +2811,10 @@ const Word = () => {
         <iconify-icon icon="material-symbols:save"></iconify-icon>
       </button> */}
 
-      <div className="word-container dark:text-[#333] relative " ref={printRef}>
+      <div
+        className={`word-container dark:text-[#333] relative ${editing ? "editing-mode" : ""}`}
+        ref={printRef}
+      >
         <div className="sticky top-20 z-50 mb-3 print-btns right-9">
           <div className="flex justify-end w-full">
             <div
@@ -2714,7 +2913,7 @@ const Word = () => {
         </div>
         <div className="a4 mundarija1">
           <div className="page-content top editable">
-            <h2 className="mundarija first-m">Mundarija</h2>
+            <div className="mundarija first-m">Mundarija</div>
             <div className="mundarija-content first">
               <div className="content-title">
                 <span>3</span>
@@ -2862,7 +3061,7 @@ const Word = () => {
             <div className="max-w-[200px]">“{appName}”</div>
             <div>mobil ilovasi</div>
           </div>
-          <div className="page-content top editable">
+          <div className="page-content top editable" style={{marginTop: '40px'}}>
             <table className="depart-table">
               <tbody>
                 {secondSection.map((item, index) => (
@@ -2901,7 +3100,7 @@ const Word = () => {
             <div className="max-w-[200px] ml-auto">“{appName}”</div>
             <div>mobil ilovasi</div>
           </div>
-          <div className="page-content top editable">
+          <div className="page-content top editable" style={{marginTop: '40px'}}>
             <table className="depart-table">
               <tbody>
                 {thirdSection.map((item, index) => (
@@ -2938,7 +3137,7 @@ const Word = () => {
             <div className="max-w-[200px]">“{appName}”</div>
             <div>mobil ilovasi</div>
           </div>
-          <div className="page-content top editable">
+          <div className="page-content top editable" style={{marginTop: '40px'}}>
             <table className="depart-table">
               <tbody>
                 {fourthSection.map((item, index) => (
@@ -2969,7 +3168,7 @@ const Word = () => {
             <div className="max-w-[200px] ml-auto">“{appName}”</div>
             <div>mobil ilovasi</div>
           </div>
-          <div className="page-content editable">
+          <div className="page-content editable" style={{marginTop: '40px'}}>
             <div className="title">1.2. Ekspertiza o‘tkazish uchun asos</div>
             <div className="text">
               "Kiberxavfsizlik markazi" davlat unitar korxonasi va "{orgName}"{" "}
@@ -3075,7 +3274,7 @@ const Word = () => {
             <div className="max-w-[200px]">“{appName}”</div>
             <div>mobil ilovasi</div>
           </div>
-          <div className="page-content editable">
+          <div className="page-content editable" style={{marginTop: '40px'}}>
             <table className="expert-table editable-table mt-6">
               <tbody>
                 <tr>
@@ -3194,7 +3393,7 @@ const Word = () => {
             <div className="max-w-[200px] ml-auto">“{appName}”</div>
             <div>mobil ilovasi</div>
           </div>
-          <div className="page-content editable">
+          <div className="page-content editable" style={{marginTop: '40px'}}>
             <table className="expert-table editable-table mt-6">
               <tbody>
                 <tr>
@@ -3286,7 +3485,7 @@ const Word = () => {
             <div className="max-w-[200px]">“{appName}”</div>
             <div>mobil ilovasi</div>
           </div>
-          <div className="page-content editable">
+          <div className="page-content editable" style={{marginTop: '40px'}}>
             <table className="depart-table">
               <tbody>
                 {expertEtaps.slice(1, 4).map((item, index) => (
@@ -3327,7 +3526,7 @@ const Word = () => {
             <div className="max-w-[200px] ml-auto">“{appName}”</div>
             <div>mobil ilovasi</div>
           </div>
-          <div className="page-content editable">
+          <div className="page-content editable" style={{marginTop: '40px'}}>
             <table className="depart-table">
               <tbody>
                 {expertEtaps.slice(4, 7).map((item, index) => (
@@ -3374,7 +3573,7 @@ const Word = () => {
             <div className="max-w-[200px]">“{appName}”</div>
             <div>mobil ilovasi</div>
           </div>
-          <div className="page-content editable">
+          <div className="page-content editable" style={{marginTop: '40px'}}>
             <table className="depart-table">
               <tbody>
                 {inExperts.slice(0, 5).map((item, index) => (
@@ -3415,7 +3614,7 @@ const Word = () => {
             <div className="max-w-[200px] ml-auto">“{appName}”</div>
             <div>mobil ilovasi</div>
           </div>
-          <div className="page-content editable">
+          <div className="page-content editable" style={{marginTop: "40px"}}>
             <table className="depart-table">
               <tbody>
                 {inExperts.slice(6, 9).map((item, index) => (
@@ -3500,7 +3699,7 @@ const Word = () => {
             <div className="max-w-[200px]">“{appName}”</div>
             <div>mobil ilovasi</div>
           </div>
-          <div className="page-content editable">
+          <div className="page-content editable" style={{marginTop: "40px"}}>
             <h1 class="depart-title mundarija-section">IKKINCHI BO‘LIM.</h1>
             <h2 class="depart-subtitle">UMUMIY MA’LUMOTLAR</h2>
             <div className="title">
@@ -3566,7 +3765,7 @@ const Word = () => {
             <div className="max-w-[200px] ml-auto">“{appName}”</div>
             <div>mobil ilovasi</div>
           </div>
-          <div className="page-content editable">
+          <div className="page-content editable" style={{marginTop: "40px"}}>
             <div className="text">
               Olib borilgan ekspertiza natijalari asosida aniqlangan axborot
               xavfsizligi zaifliklari to‘g‘risida umumlashtirilgan ma’lumotlar
@@ -3658,7 +3857,7 @@ const Word = () => {
             <div className="max-w-[200px]">“{appName}”</div>
             <div>mobil ilovasi</div>
           </div>
-          <div className="page-content editable">
+          <div className="page-content editable" style={{marginTop: "40px"}}>
             <div className="text-i my-3 underline">
               6-jadval. “{appName}” iOS mobil ilovasida <br />
               aniqlangan zaifliklar.
@@ -3817,7 +4016,7 @@ const Word = () => {
 
               <div
                 className="page-content editable new-content"
-                style={{ paddingTop: "10px" }}
+                style={{ paddingTop: "10px", marginTop: "40px" }}
               >
                 {pageItems.map((item, i) => (
                   <div key={i} dangerouslySetInnerHTML={{ __html: item }} />
@@ -4039,29 +4238,29 @@ const Word = () => {
 
             <div className="absolute bottom-6 left-12">
               <div className="system-col">
-                <p className="system-paragraph">
-                  Ro'yhat tartib raqami{" "}
+                <p className="system-paragraph1" style={{lineHeight: '1.6'}}>
+                  Ro'yxat tartib raqami{" "}
                   <span className="w-10 border-b border-black"></span>
                   _______-XDFU-son
                 </p>
-                <p className="system-paragraph">
+                <p className="system-paragraph1" style={{lineHeight: '1.6'}}>
                   Kompyuterda ikki nusxada chop etildi.
                 </p>
-                <p className="system-paragraph">
+                <p className="system-paragraph1" style={{lineHeight: '1.6'}}>
                   Fayl saqlanmadi. Xomaki matnsiz.
                 </p>
-                <p className="system-paragraph">
-                  1-nusxa - "TAYANCH MIKROMOLIYA BANKI" {orgTypeName} ga
+                <p className="system-paragraph1" style={{lineHeight: '1.6'}}>
+                  1-nusxa - "{orgName}" {orgTypeName} ga
                 </p>
-                <p className="system-paragraph">
+                <p className="system-paragraph1" style={{lineHeight: '1.6'}}>
                   2-nusxa - Nazorat va hujjatlar
                 </p>
-                <p className="system-paragraph">aylanishi bo'limi jildiga</p>
-                <p className="system-paragraph">
+                <p className="system-paragraph1" style={{lineHeight: '1.6'}}>aylanishi bo'limi jildiga</p>
+                <p className="system-paragraph1" style={{lineHeight: '1.6'}}>
                   Bajardi va chop etdi I. Odinayev
                 </p>
-                <p className="system-paragraph">Tel.: (71) 203-00-24</p>
-                <p className="system-paragraph">
+                <p className="system-paragraph1" style={{lineHeight: '1.6'}}>Tel.: (71) 203-00-24</p>
+                <p className="system-paragraph1" style={{lineHeight: '1.6'}}>
                   {new Date().getFullYear()}-yil "_____ "- ______________
                 </p>
               </div>

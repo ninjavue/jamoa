@@ -98,6 +98,7 @@ const STATUS_STEPS = [
   { id: 8, label: "Qayta expertiza" },
   { id: 9, label: "To'liq yakunlangan" },
   { id: 10, label: "Vaqtincha to'xtatilgan" },
+  { id: 11, label: "Shartnoma bekor qilingan" },
 ];
 
 const ITEMS_PER_PAGE = 10;
@@ -455,21 +456,66 @@ const Expertise = () => {
         setExpertize(data);
         setJustPage(0);
       }
+      closeDrawer();
+      setFormData({
+        surname: "",
+        name: "",
+        partName: "",
+        email: "",
+        role: "",
+        department: "",
+        phone: "",
+        image: "",
+      });
     } else {
-      toast.error("Xatolik yuz berdi!");
-    }
+      res[1]?.map((item) => {
+        switch (item.field) {
+          case "1":
+            toast.error("Tashkilot nomi xato kiritildi!");
+            break;
+          case "2":
+            toast.error("Tashkilot idsi xato kiritildi(uuid)");
+            break;
+          case "3":
+            toast.error("Tizm idsi xato!(uuid)");
+            break;
+          case "4":
+            toast.error("Tizim nomi xato kiritildi!");
+            break;
+          case "7":
+            toast.error("Summa xato kiritildi.");
+            break;
+          case "6":
+            toast.error("Shartnoma raqami xato kiritildi");
+            break;
+          case "5":
+            toast.error("Shartnoma fayli xato!");
+            break;
+          case "8":
+            toast.error("Shartnoma sanasi xato!");
+            break;
+          case "9":
+            toast.error("To'lov sanasi xato!");
+            break;
+          case "10":
+            toast.error("Hisobot yozuvchi xato!");
+            break;
+          case "11":
+            toast.error("Nazoratchi xato kiritildi");
+            break;
+          case "12":
+            toast.error("Bajaruvchi xato kiritildi");
+            break;
+          case "14":
+            toast.error("Tashkilot turi xato tanlandi");
 
-    setFormData({
-      surname: "",
-      name: "",
-      partName: "",
-      email: "",
-      role: "",
-      department: "",
-      phone: "",
-      image: "",
-    });
-    closeDrawer();
+          default:
+            toast.error("Xatolik yuz berdi!");
+            break;
+        }
+        // toast.error(item?.message)
+      });
+    }
   };
 
   const saveStartDate = async () => {
@@ -2378,9 +2424,10 @@ Mazkur turdagi zaiflik “MASWE-0058” (inglizcha. Insecure Deep Links – Xavf
                       Buyurtma narxi
                     </label>
                     <input
-                      type="text"
+                      type="number"
                       id="ordPrice"
                       name="ordPrice"
+                      min="0"
                       value={formData.ordPrice}
                       onChange={handleChange}
                       className={`w-full mt-1 px-4 py-2 border rounded-md bg-transparent ${hasCreateError("ordPrice") ? "!border-red-500 ring-1 ring-red-500" : ""}`}
@@ -3160,6 +3207,7 @@ Mazkur turdagi zaiflik “MASWE-0058” (inglizcha. Insecure Deep Links – Xavf
                           <option value="8">Qayta ekspertiza</option>
                           <option value="9">To'liq yakunlangan</option>
                           <option value="10">Vaqtincha to'xtatilgan</option>
+                          <option value="11">Shartnoma bekor qilingan</option>
                         </select>
                       </div>
                       {selectedProcessStep &&
@@ -3859,11 +3907,15 @@ Mazkur turdagi zaiflik “MASWE-0058” (inglizcha. Insecure Deep Links – Xavf
                 <thead>
                   <tr className="bg-slate-50 text-slate-500 text-[13px] uppercase border-b border-slate-200 dark:bg-transparent">
                     <th className="px-4 py-3 font-medium">N</th>
-                    <th className="px-4 py-3 font-medium text-center">TASHKILOT NOMI</th>
+                    <th className="px-4 py-3 font-medium text-center">
+                      TASHKILOT NOMI
+                    </th>
                     <th className="px-4 py-3 font-medium text-wrap max-w-[250px] text-center">
                       AXBOROT TIZIMINING NOMI
                     </th>
-                    <th className="px-4 py-3 font-medium text-center">SHARTNOMA RAQAMI</th>
+                    <th className="px-4 py-3 font-medium text-center">
+                      SHARTNOMA RAQAMI
+                    </th>
                     <th className="px-4 py-3 font-medium ">NAZORATCHI</th>
                     <th className="px-4 py-3 font-medium ">BAJARUVCHI</th>
                     <th className="px-4 py-3 font-medium text-wrap w-[200px] text-center">

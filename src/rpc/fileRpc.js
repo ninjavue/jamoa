@@ -1,6 +1,7 @@
 import { sendRpcRequest } from "./rpcClient";
 import { METHOD, buildRequestFrame } from "../protocol/zirhRpc.js";
 import { sendAppMessage } from "../transport/wsClient.js";
+import toast from "react-hot-toast";
 
 
 export const uploadFileViaRpc = async (stRef, file, convId, onProgress) => {
@@ -9,6 +10,7 @@ export const uploadFileViaRpc = async (stRef, file, convId, onProgress) => {
   const fileNameStr = typeof file.name === "string" ? file.name : String(file.name || "");
   const fileExtension = fileNameStr.split(".").pop()?.toLowerCase() ?? "";
   if (!allowedExtensions.includes(fileExtension)) {
+    toast.error("Fayl farmati xato yoki fayl tanlanmagan!")
     throw new Error(`Xatolik: .${fileExtension} formatidagi fayllarni yuklash mumkin emas!`);
   }
   // console.log({name: file.name, size: file.size, mime: file.type || "application/octet-stream", convId,})
