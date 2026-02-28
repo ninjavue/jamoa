@@ -138,7 +138,7 @@ const getDefaultPages3 = () => [
     '<div class="text">Tashqi IP manzillarni o\'rganish jarayonida har bir IP manzilda bir qancha "ochiq" portlar aniqlandi.</div>',
     '<div class="text-i my-3 underline">7-jadval. Ochiq portlar</div>',
     '<div class="default-table-wrapper" data-default-table="7"><table class="expert-table editable-table default-resource-table"><thead><tr><th style="width:40px;min-width:40px">T/r</th><th style="width:110px;min-width:90px">IP manzil</th><th style="width:240px;min-width:200px">Ochiq portlar</th></tr></thead><tbody><tr><td>1.</td><td>192.168.0.1</td><td>80/tcp</td></tr></tbody></table></div>',
-    '<div class="text">Mobil ilovaning ichki va tashqi resurslari monitoringi jarayonida axborot xavfsizligi zaifliklari aniqlanmadi.</div>',
+    '<div class="text text-umumiy">Mobil ilovaning ichki va tashqi resurslari monitoringi jarayonida axborot xavfsizligi zaifliklari aniqlanmadi.</div>',
   ],
 ];
 
@@ -187,6 +187,22 @@ const parseVulnByLevel = (payloads) => {
     });
   });
   return { high, medium, low };
+};
+
+/** Platformadagi mavjud zaifliklar nomlarini (a3) normalizatlangan ro‘yxat sifatida qaytaradi */
+const getExistingVulnNamesForPlatform = (payloads) => {
+  const names = [];
+  (payloads || []).forEach((p) => {
+    const arr = p[13] || p[12] || p[11];
+    const list = Array.isArray(arr) ? arr : arr ? [arr] : [];
+    list.forEach((v) => {
+      if (v && v.a3 != null) {
+        const name = String(v.a3).replace(/\s+/g, " ").trim().toLowerCase();
+        if (name) names.push(name);
+      }
+    });
+  });
+  return names;
 };
 
 const Word = () => {
@@ -257,6 +273,7 @@ const Word = () => {
   const printRef = useRef(null);
   const resolvedBlobUrlsRef = useRef(new Set());
   const isLoadingFromServerRef = useRef(false);
+  const skipNextNewVulnEffectRef = useRef(false);
   const pages1Ref = useRef([]);
   const pages2Ref = useRef([]);
   const pages3Ref = useRef([]);
@@ -333,6 +350,9 @@ const Word = () => {
         if (t.includes("ios")) return "ios";
         if (t.includes("mobil ilova va server") || t.includes("umumiy"))
           return "umumiy";
+        // 2.4 Tashqi resurslari bo'limi ham umumiy (umumiy) bo'limiga tegishli
+        if (t.includes("tashqi resurslari") || t.includes("2.4."))
+          return "umumiy";
       }
     }
     return null;
@@ -392,10 +412,14 @@ const Word = () => {
             clone.querySelector(".default-table-add-row")?.remove();
             const table = clone.querySelector("table");
             if (table) {
-              table.querySelectorAll("thead tr th.default-table-delete-cell").forEach((th) => th.remove());
-              table.querySelectorAll("tbody tr td.default-table-delete-cell").forEach((td) => td.remove());
+              table.querySelectorAll("th.default-table-delete-cell").forEach((th) => th.remove());
+              table.querySelectorAll("td.default-table-delete-cell").forEach((td) => td.remove());
+              table.querySelectorAll(".default-table-delete-row").forEach((btn) => btn.closest("td")?.remove() || btn.closest("th")?.remove() || btn.remove());
             }
-            return clone.outerHTML;
+            let html = clone.outerHTML;
+            html = html.replace(/<t[dh][^>]*class="[^"]*default-table-delete-cell[^"]*"[^>]*>[\s\S]*?<\/t[dh]>/gi, "");
+            html = html.replace(/<button[^>]*class="[^"]*default-table-delete-row[^"]*"[^>]*>[\s\S]*?<\/button>/gi, "");
+            return html;
           }
           if (el.tagName === "DIV") {
             const hasNested =
@@ -1603,22 +1627,27 @@ const Word = () => {
         });
       });
     } else {
-      // Tahrirlash yopilganda: plus va o'chirish ustunini olib tashlash
+      // Tahrirlash yopilganda: plus va o'chirish ustunini to'liq olib tashlash (ustun umuman chiqmasin)
+      const removeDeleteColumn = (tbl) => {
+        if (!tbl) return;
+        const thead = tbl.querySelector("thead tr");
+        if (thead) {
+          Array.from(thead.querySelectorAll("th")).forEach((th) => {
+            if (th.classList.contains("default-table-delete-cell") || th.querySelector(".default-table-delete-row"))
+              th.remove();
+          });
+        }
+        tbl.querySelectorAll("tbody tr").forEach((tr) => {
+          Array.from(tr.querySelectorAll("td")).forEach((td) => {
+            if (td.classList.contains("default-table-delete-cell") || td.querySelector(".default-table-delete-row"))
+              td.remove();
+          });
+        });
+      };
       wrappers.forEach((wrapper) => {
         const addBtn = wrapper.querySelector(".default-table-add-row");
         if (addBtn) addBtn.remove();
-
-        const table = wrapper.querySelector("table");
-        if (!table) return;
-        const thead = table.querySelector("thead tr");
-        if (thead) {
-          const thDel = thead.querySelector("th.default-table-delete-cell");
-          if (thDel) thDel.remove();
-        }
-        table.querySelectorAll("tbody tr").forEach((tr) => {
-          const tdDel = tr.querySelector("td.default-table-delete-cell");
-          if (tdDel) tdDel.remove();
-        });
+        removeDeleteColumn(wrapper.querySelector("table"));
       });
     }
 
@@ -1630,12 +1659,16 @@ const Word = () => {
         if (!table) return;
         const thead = table.querySelector("thead tr");
         if (thead) {
-          const thDel = thead.querySelector("th.default-table-delete-cell");
-          if (thDel) thDel.remove();
+          Array.from(thead.querySelectorAll("th")).forEach((th) => {
+            if (th.classList.contains("default-table-delete-cell") || th.querySelector(".default-table-delete-row"))
+              th.remove();
+          });
         }
         table.querySelectorAll("tbody tr").forEach((tr) => {
-          const tdDel = tr.querySelector("td.default-table-delete-cell");
-          if (tdDel) tdDel.remove();
+          Array.from(tr.querySelectorAll("td")).forEach((td) => {
+            if (td.classList.contains("default-table-delete-cell") || td.querySelector(".default-table-delete-row"))
+              td.remove();
+          });
         });
       });
     };
@@ -1694,7 +1727,7 @@ const Word = () => {
   };
 
   const getExpertById = async () => {
-    // console.log(id);
+    isLoadingFromServerRef.current = true;
     try {
       const res = await sendRpcRequest(stRef, METHOD.ORDER_GET_ID, { 1: id });
       console.log(res);
@@ -1809,6 +1842,7 @@ const Word = () => {
         setPages1(loadedPagesByPlatform.android || []);
         setPages2(loadedPagesByPlatform.ios || []);
         setPages3(loadedPagesByPlatform.umumiy || []);
+        skipNextNewVulnEffectRef.current = true;
 
         const newVulnFromPages = {
           android: (loadedPagesByPlatform.android || []).flat(),
@@ -1848,6 +1882,8 @@ const Word = () => {
     } catch (error) {
       // console.log(error);
       console.log("Xatolik yuz berdi!");
+    } finally {
+      isLoadingFromServerRef.current = false;
     }
   };
 
@@ -2148,12 +2184,28 @@ const Word = () => {
   };
 
   const handleSaveDocFromModal = (docVuln) => {
-    // console.log("Childdan keldi:", docVuln);
+    const rawName = docVuln?.vuln?.[1]?.[1];
+    const newName = rawName
+      ? stripHtml(String(rawName)).replace(/\s+/g, " ").trim().toLowerCase()
+      : "";
+    if (newName) {
+      const payloads =
+        docVuln.platform === "android"
+          ? vulnAndroid
+          : docVuln.platform === "ios"
+            ? vulnIOS
+            : vulnUm;
+      const existingNames = getExistingVulnNamesForPlatform(payloads);
+      if (existingNames.includes(newName)) {
+        toast.error(
+          "Ushbu platformada bunday nomli zaiflik allaqachon mavjud. Boshqa nom tanlang yoki boshqa platformani tanlang.",
+        );
+        return;
+      }
+    }
     setPlatform(docVuln.platform);
     generateVulnHtml(docVuln.vuln, docVuln.platform);
     const html = vulnerabilityTemplates[docVuln.type];
-    // console.log("HTML:", html);
-
     addVulnerabilityToPages(html);
     handleSubmit(docVuln);
   };
@@ -2365,6 +2417,13 @@ const Word = () => {
       return;
     }
 
+    // Serverdan yuklanmaguncha (newVuln hali bo'sh) pages ni default bilan ustiga yozmaymiz — birinchi yuklanishda server ma'lumoti chiqishi uchun
+    const hasAnyVulnContent =
+      (newVuln?.android?.length || 0) > 0 ||
+      (newVuln?.ios?.length || 0) > 0 ||
+      (newVuln?.umumiy?.length || 0) > 0;
+    if (!hasAnyVulnContent) return;
+
     const getLevelOrder = (block) => {
       const text = stripHtml(block);
       if (text.includes("Yuqori")) return 1;
@@ -2410,18 +2469,30 @@ const Word = () => {
 
     const androidBlocks = sortVulnBlocks(newVuln?.android || []);
     const iosBlocks = sortVulnBlocks(newVuln?.ios || []);
-    const umumiyBlocks = sortVulnBlocks(newVuln?.umumiy || []);
+    const rawUmumiy = newVuln?.umumiy || [];
 
-    // Umumiy: default (2.4, jadvallar) doim birinchi, zaifliklar pastida. Saqlangan ma'lumotda default bor bo'lsa qayta qo'shamiz.
+    // Umumiy: har doim avval default 2.4 (text-umumiy gacha), keyin faqat zaiflik bloklari (2.2.x) — ham qo'shilganda ham serverdan kelganda.
     const defaultUmumiyBlocks = getDefaultPages3()[0] || [];
-    const alreadyHasDefault =
-      umumiyBlocks.length > 0 &&
-      String(umumiyBlocks[0] || "").includes(
-        "2.4. Mobil ilova tashqi resurslari",
-      );
-    const allUmumiyBlocks = alreadyHasDefault
-      ? umumiyBlocks
-      : [...defaultUmumiyBlocks, ...umumiyBlocks];
+    const firstVulnIndex = rawUmumiy.findIndex(
+      (b) =>
+        typeof b === "string" &&
+        b.includes('class="exp-title"') &&
+        b.includes("2.2.") &&
+        !b.includes("2.4.")
+    );
+    const vulnBlocksOnly =
+      firstVulnIndex >= 0
+        ? sortVulnBlocks(rawUmumiy.slice(firstVulnIndex))
+        : [];
+    const allUmumiyBlocks =
+      vulnBlocksOnly.length > 0
+        ? [...defaultUmumiyBlocks, ...vulnBlocksOnly]
+        : defaultUmumiyBlocks;
+
+    if (skipNextNewVulnEffectRef.current) {
+      skipNextNewVulnEffectRef.current = false;
+      return;
+    }
 
     setPages1(androidBlocks.length ? paginateContent(androidBlocks) : []);
     setPages2(iosBlocks.length ? paginateContent(iosBlocks) : []);
@@ -2525,10 +2596,14 @@ const Word = () => {
             clone.querySelector(".default-table-add-row")?.remove();
             const table = clone.querySelector("table");
             if (table) {
-              table.querySelectorAll("thead tr th.default-table-delete-cell").forEach((th) => th.remove());
-              table.querySelectorAll("tbody tr td.default-table-delete-cell").forEach((td) => td.remove());
+              table.querySelectorAll("th.default-table-delete-cell").forEach((th) => th.remove());
+              table.querySelectorAll("td.default-table-delete-cell").forEach((td) => td.remove());
+              table.querySelectorAll(".default-table-delete-row").forEach((btn) => btn.closest("td")?.remove() || btn.closest("th")?.remove() || btn.remove());
             }
-            pageBlocks.push(clone.outerHTML);
+            let html = clone.outerHTML;
+            html = html.replace(/<t[dh][^>]*class="[^"]*default-table-delete-cell[^"]*"[^>]*>[\s\S]*?<\/t[dh]>/gi, "");
+            html = html.replace(/<button[^>]*class="[^"]*default-table-delete-row[^"]*"[^>]*>[\s\S]*?<\/button>/gi, "");
+            pageBlocks.push(html);
             return;
           }
           if (child.tagName === "DIV") {
@@ -2713,10 +2788,12 @@ const Word = () => {
     (page) => !isPageEmpty(page),
   );
 
-  // Mundarija uchun barcha malumotlar
+  // Mundarijada 2.4.1 "Mobil ilova va server o'rtasidagi so'rovlarni o'rganish jarayoni" ko‘rinmasin
   const mundarijaVulnItems = useMemo(() => {
     const items = [];
     let pageNum = 17;
+    const is241Section = (text) =>
+      /2\.4\.1/.test(text) && /Mobil ilova va server/.test(text) && /so['\u2019]rovlarni o['\u2019]rganish jarayoni/i.test(text);
     currentPages.forEach((pageBlocks) => {
       (pageBlocks || []).forEach((block) => {
         if (
@@ -2726,7 +2803,7 @@ const Word = () => {
         ) {
           const raw = stripHtml(block).trim();
           const title = raw.replace(/^\s*2\.2\.\d+\s*/, "");
-          if (title) items.push({ title, pageNum });
+          if (title && !is241Section(raw)) items.push({ title, pageNum });
         }
       });
       pageNum += 1;
@@ -3215,36 +3292,37 @@ const Word = () => {
                   <td>Fayl nomi</td>
                   <td>-</td>
                 </tr>
-                <tr>
+                 <tr>
                   <td>4.</td>
-                  <td>Paket nomi</td>
+                  <td>Ilova kategoriyasi</td>
                   <td>-</td>
                 </tr>
                 <tr>
                   <td>5.</td>
-                  <td>Asosiy oyna</td>
+                  <td>Paket nomi</td>
                   <td>-</td>
                 </tr>
                 <tr>
                   <td>6.</td>
-                  <td>Talqin</td>
+                  <td>Asosiy oyna</td>
                   <td>-</td>
                 </tr>
                 <tr>
                   <td>7.</td>
-                  <td>Minimal API talqini</td>
+                  <td>Talqin</td>
                   <td>-</td>
                 </tr>
                 <tr>
                   <td>8.</td>
-                  <td>Joriy API talqini</td>
+                  <td>Minimal API talqini</td>
                   <td>-</td>
                 </tr>
                 <tr>
                   <td>9.</td>
-                  <td>Ilova kategoriyasi</td>
+                  <td>Joriy API talqini</td>
                   <td>-</td>
                 </tr>
+               
               </tbody>
             </table>
           </div>
@@ -3279,22 +3357,22 @@ const Word = () => {
               <tbody>
                 <tr>
                   <td>10.</td>
-                  <td>Ilova logotipi</td>
-                  <td>-</td>
-                </tr>
-                <tr>
-                  <td>11.</td>
                   <td>Play Market havolasi</td>
                   <td>-</td>
                 </tr>
                 <tr>
-                  <td>12.</td>
+                  <td>11.</td>
                   <td>Play Market reytingi</td>
                   <td>-</td>
                 </tr>
                 <tr>
-                  <td>13.</td>
+                  <td>12.</td>
                   <td>O‘rnatilishlar soni </td>
+                  <td>-</td>
+                </tr>
+                 <tr>
+                  <td>13.</td>
+                  <td>Ilova logotipi</td>
                   <td>-</td>
                 </tr>
                 <tr>
@@ -3347,12 +3425,12 @@ const Word = () => {
                 </tr>
                 <tr>
                   <td>4.</td>
-                  <td>Paket nomi</td>
+                  <td>Ilova kategoriyasi</td>
                   <td>-</td>
                 </tr>
                 <tr>
                   <td>5.</td>
-                  <td>Asosiy oyna</td>
+                  <td>Paket nomi</td>
                   <td>-</td>
                 </tr>
                 <tr>
@@ -3363,6 +3441,11 @@ const Word = () => {
                 <tr>
                   <td>7.</td>
                   <td>Minimal API talqini</td>
+                  <td>-</td>
+                </tr>
+                 <tr>
+                  <td>8.</td>
+                  <td>Joriy API talqini</td>
                   <td>-</td>
                 </tr>
               </tbody>
@@ -3397,47 +3480,32 @@ const Word = () => {
             <table className="expert-table editable-table mt-6">
               <tbody>
                 <tr>
-                  <td>8.</td>
-                  <td>Joriy API talqini</td>
-                  <td>-</td>
-                </tr>
-                <tr>
                   <td>9.</td>
-                  <td>Ilova kategoriyasi</td>
-                  <td>-</td>
-                </tr>
-                <tr>
-                  <td>10.</td>
                   <td>Ilova logotipi </td>
                   <td>-</td>
                 </tr>
                 <tr>
-                  <td>11.</td>
+                  <td>10.</td>
                   <td>“App store” havolasi</td>
                   <td>-</td>
                 </tr>
                 <tr>
-                  <td>12.</td>
+                  <td>11.</td>
                   <td>“App store” reytingi</td>
                   <td>-</td>
                 </tr>
                 <tr>
-                  <td>13.</td>
-                  <td>O‘rnatilishlar soni </td>
-                  <td>-</td>
-                </tr>
-                <tr>
-                  <td>14.</td>
+                  <td>12.</td>
                   <td>MD5</td>
                   <td>- </td>
                 </tr>
                 <tr>
-                  <td>15.</td>
+                  <td>13.</td>
                   <td>SHA1</td>
                   <td>-</td>
                 </tr>
                 <tr>
-                  <td>16.</td>
+                  <td>14.</td>
                   <td>SHA256</td>
                   <td>-</td>
                 </tr>

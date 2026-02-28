@@ -1613,3 +1613,8 @@ background-item.is-visible:not(.backwards) {
 .status-step-group:first-child::before {
 	display: none;
 }
+
+
+.default-resource-table tbody td:nth-child(n+4) {
+    display: none;
+}
